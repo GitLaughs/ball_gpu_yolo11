@@ -23,7 +23,6 @@ class StereoParams:
     right_map2: np.ndarray
 
 class StereoMatcher:
-    """沿用你现在的 SGBM（你原来叫 GPUStereoMatcher，但实际是 CPU SGBM）"""
     def __init__(self):
         blockSize = 8
         self.stereo = cv2.StereoSGBM_create(
