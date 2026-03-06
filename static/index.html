@@ -1,806 +1,1160 @@
-<!-- 文件路径: static/index.html -->
+<!-- static/index.html -->
+
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🏀 Basketball Shot Detection System</title>
-<style>
-/* ============ Reset & Variables ============ */
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#0a0e17;--bg-card:#111827;--bg-card-alt:#1a2332;--bg-input:#1e293b;
-  --border:#1e293b;--border-lt:#334155;
-  --txt:#f1f5f9;--txt2:#94a3b8;--txt3:#64748b;
-  --accent:#3b82f6;--accent-g:rgba(59,130,246,.25);
-  --ok:#22c55e;--ok-g:rgba(34,197,94,.25);
-  --warn:#f59e0b;--warn-g:rgba(245,158,11,.25);
-  --err:#ef4444;--err-g:rgba(239,68,68,.25);
-  --cyan:#06b6d4;--purple:#8b5cf6;
-  --r:12px;--rs:8px;
-  --shadow:0 4px 24px rgba(0,0,0,.35);
-}
-body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;line-height:1.5}
-::-webkit-scrollbar{width:6px}
-::-webkit-scrollbar-track{background:var(--bg)}
-::-webkit-scrollbar-thumb{background:var(--border-lt);border-radius:3px}
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🏀 AI 篮球投篮分析系统</title>
+  <style>
+    /* ═══════════════ 全局样式 ═══════════════ */
+    :root {
+      --bg-primary: #0f1923;
+      --bg-secondary: #1a2634;
+      --bg-card: #1e2d3d;
+      --bg-card-hover: #243447;
+      --accent: #ff6b35;
+      --accent-light: #ff8c5a;
+      --accent-dark: #e55a25;
+      --success: #00e676;
+      --success-dim: #00c853;
+      --danger: #ff5252;
+      --danger-dim: #e04545;
+      --info: #40c4ff;
+      --info-dim: #29b6f6;
+      --text-primary: #e8eaed;
+      --text-secondary: #9aa0a6;
+      --text-muted: #5f6368;
+      --border: #2d3f50;
+      --border-light: #3a4f63;
+      --shadow: rgba(0, 0, 0, 0.4);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
 
-/* ============ Top Bar ============ */
-.topbar{
-  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
-  padding:14px 24px;background:var(--bg-card);border-bottom:1px solid var(--border);
-  position:sticky;top:0;z-index:100;backdrop-filter:blur(10px);
-}
-.topbar .logo{display:flex;align-items:center;gap:10px;font-size:1.2rem;font-weight:700;white-space:nowrap}
-.topbar .logo span{font-size:1.5rem}
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.btn{
-  display:inline-flex;align-items:center;gap:6px;
-  padding:8px 18px;border:1px solid var(--border-lt);border-radius:var(--rs);
-  background:var(--bg-input);color:var(--txt);font-size:.875rem;font-weight:500;
-  cursor:pointer;transition:all .2s;white-space:nowrap;
-}
-.btn:hover{background:var(--bg-card-alt);border-color:var(--accent)}
-.btn:active{transform:scale(.97)}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-.btn.primary:hover{background:#2563eb}
-.btn.danger{border-color:var(--err)}
-.btn.danger:hover{background:var(--err);color:#fff}
-.btn.warn{border-color:var(--warn)}
-.btn.warn:hover{background:var(--warn);color:#000}
-.btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
-.upload-label{
-  display:inline-flex;align-items:center;gap:6px;
-  padding:8px 18px;border:1px dashed var(--border-lt);border-radius:var(--rs);
-  background:var(--bg-input);color:var(--txt2);font-size:.875rem;cursor:pointer;transition:all .2s;
-}
-.upload-label:hover{border-color:var(--cyan);color:var(--cyan)}
-.upload-label input{display:none}
+    body {
+      font-family: -apple-system, 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei',
+        'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
 
-.conn{display:flex;align-items:center;gap:6px;font-size:.8rem;color:var(--txt3)}
-.conn-dot{width:8px;height:8px;border-radius:50%;background:var(--txt3);transition:background .3s}
-.conn-dot.on{background:var(--ok);box-shadow:0 0 6px var(--ok-g)}
-.conn-dot.off{background:var(--err);box-shadow:0 0 6px var(--err-g)}
+    /* ═══════════════ 预处理遮罩 ═══════════════ */
+    #preprocess-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 25, 35, 0.95);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(12px);
+    }
 
-/* ============ Toast / Notification ============ */
-.toast{
-  position:fixed;top:80px;right:24px;z-index:200;
-  padding:14px 24px;border-radius:var(--rs);
-  font-weight:600;font-size:.95rem;
-  transform:translateX(120%);transition:transform .4s cubic-bezier(.4,0,.2,1);
-  box-shadow:var(--shadow);pointer-events:none;
-}
-.toast.show{transform:translateX(0)}
-.toast.scored{background:linear-gradient(135deg,#065f46,#064e3b);border:1px solid var(--ok);color:var(--ok)}
-.toast.missed{background:linear-gradient(135deg,#7f1d1d,#450a0a);border:1px solid var(--err);color:var(--err)}
+    #preprocess-overlay.active {
+      display: flex;
+    }
 
-/* ============ Main Layout ============ */
-.main{padding:20px 24px;display:flex;flex-direction:column;gap:20px}
+    .preprocess-box {
+      text-align: center;
+      padding: 48px 60px;
+      background: var(--bg-card);
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      box-shadow: 0 20px 60px var(--shadow);
+      max-width: 500px;
+    }
 
-/* ============ Video Grid ============ */
-.video-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
-.video-card{
-  background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);
-  overflow:hidden;display:flex;flex-direction:column;
-}
-.video-card .vid-header{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:10px 16px;border-bottom:1px solid var(--border);
-}
-.video-card .vid-header h3{font-size:.85rem;font-weight:600;color:var(--txt2)}
-.video-card .vid-header .badge{
-  font-size:.7rem;padding:2px 8px;border-radius:10px;
-  background:var(--accent-g);color:var(--accent);font-weight:600;
-}
-.video-card img{width:100%;aspect-ratio:4/3;object-fit:contain;background:#000;display:block}
+    .preprocess-box .spinner {
+      width: 60px;
+      height: 60px;
+      border: 4px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 24px;
+    }
 
-/* ============ Info Grid ============ */
-.info-grid{display:grid;grid-template-columns:1fr 1fr 1.3fr;gap:16px}
-.card{
-  background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);
-  padding:20px;display:flex;flex-direction:column;gap:14px;
-}
-.card h3{font-size:.95rem;font-weight:700;display:flex;align-items:center;gap:8px}
-.card h3 .icon{font-size:1.1rem}
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
 
-/* Metric rows */
-.metrics{display:flex;flex-direction:column;gap:8px}
-.metric{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-radius:var(--rs);background:var(--bg-card-alt)}
-.metric .label{font-size:.8rem;color:var(--txt3);font-weight:500}
-.metric .value{font-size:.85rem;font-weight:600;font-variant-numeric:tabular-nums}
-.metric .value.highlight{color:var(--accent)}
-.metric .value.success{color:var(--ok)}
-.metric .value.warning{color:var(--warn)}
-.metric .value.error{color:var(--err)}
+    .preprocess-box h2 {
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
 
-/* Score badge */
-.score-badge{
-  display:flex;align-items:center;justify-content:center;gap:10px;
-  padding:14px;border-radius:var(--rs);font-size:1.1rem;font-weight:700;
-  transition:all .3s;
-}
-.score-badge.scored{background:var(--ok-g);color:var(--ok);border:1px solid var(--ok)}
-.score-badge.missed{background:var(--err-g);color:var(--err);border:1px solid var(--err)}
-.score-badge.waiting{background:var(--bg-card-alt);color:var(--txt3);border:1px solid var(--border)}
+    .preprocess-box p {
+      color: var(--text-secondary);
+      font-size: 14px;
+      margin-top: 8px;
+    }
 
-/* Active pulse */
-.pulse-dot{
-  width:10px;height:10px;border-radius:50%;display:inline-block;
-  background:var(--txt3);flex-shrink:0;
-}
-.pulse-dot.active{
-  background:var(--warn);
-  animation:pulse 1.2s infinite;
-}
-@keyframes pulse{
-  0%,100%{box-shadow:0 0 0 0 var(--warn-g)}
-  50%{box-shadow:0 0 0 8px transparent}
-}
+    #preprocess-msg {
+      color: var(--text-primary);
+      font-size: 15px;
+      margin-top: 16px;
+      min-height: 20px;
+    }
 
-/* ============ Trajectory Canvas ============ */
-.traj-wrap{flex:1;min-height:0;position:relative}
-.traj-wrap canvas{width:100%;height:100%;border-radius:var(--rs);background:var(--bg-card-alt)}
-.traj-empty{
-  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-  color:var(--txt3);font-size:.85rem;pointer-events:none;
-}
+    .progress-bar-outer {
+      width: 100%;
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      margin-top: 20px;
+      overflow: hidden;
+    }
 
-/* ============ Shot History ============ */
-.history{
-  background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);
-  padding:16px 20px;
-}
-.history h3{font-size:.95rem;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
-.history-list{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px}
-.history-item{
-  flex-shrink:0;padding:10px 16px;border-radius:var(--rs);border:1px solid var(--border);
-  background:var(--bg-card-alt);font-size:.78rem;min-width:140px;
-  transition:border-color .2s;
-}
-.history-item.scored-item{border-color:var(--ok)}
-.history-item.missed-item{border-color:var(--err)}
-.history-item .hi-label{color:var(--txt3);font-size:.7rem}
-.history-item .hi-value{font-weight:600;font-variant-numeric:tabular-nums}
+    .progress-bar-inner {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-light));
+      border-radius: 3px;
+      width: 0%;
+      transition: width 0.3s;
+    }
 
-/* ============ Progress bar ============ */
-.progress-bar{
-  height:3px;background:var(--bg-input);border-radius:2px;overflow:hidden;
-  margin-top:-1px;
-}
-.progress-bar .fill{height:100%;background:var(--accent);transition:width .3s;border-radius:2px}
+    /* ═══════════════ 顶部栏 ═══════════════ */
+    .topbar {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 12px var(--shadow);
+    }
 
-/* ============ Responsive ============ */
-@media(max-width:1200px){
-  .info-grid{grid-template-columns:1fr 1fr}
-  .info-grid .card:last-child{grid-column:1/-1}
-}
-@media(max-width:900px){
-  .video-grid{grid-template-columns:1fr}
-  .info-grid{grid-template-columns:1fr}
-  .topbar{padding:10px 16px}
-  .main{padding:12px 16px}
-}
-</style>
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .topbar-logo {
+      font-size: 28px;
+      filter: drop-shadow(0 0 8px rgba(255, 107, 53, 0.4));
+    }
+
+    .topbar-title {
+      font-size: 18px;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), var(--accent-light));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .topbar-subtitle {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: -2px;
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .device-badge {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .device-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--success);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.4;
+      }
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .status-indicator .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      transition: var(--transition);
+    }
+
+    .status-indicator .dot.running {
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+    }
+
+    .status-indicator .dot.paused {
+      background: #ffc107;
+      box-shadow: 0 0 8px #ffc107;
+    }
+
+    /* ═══════════════ 主内容 ═══════════════ */
+    .main {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 16px;
+      padding: 16px 20px;
+      min-height: calc(100vh - 64px);
+    }
+
+    /* ═══════════════ 卡片 ═══════════════ */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      transition: var(--transition);
+    }
+
+    .card:hover {
+      border-color: var(--border-light);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .card-header-title {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-header-title .icon {
+      font-size: 15px;
+    }
+
+    .card-body {
+      padding: 16px;
+    }
+
+    /* ═══════════════ 控制栏 ═══════════════ */
+    .controls-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 12px 16px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 16px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 600;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: var(--transition);
+      font-family: inherit;
+      white-space: nowrap;
+    }
+
+    .btn:active {
+      transform: scale(0.96);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+      color: #fff;
+      border-color: var(--accent);
+      box-shadow: 0 2px 12px rgba(255, 107, 53, 0.3);
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, var(--accent-light), var(--accent));
+      box-shadow: 0 4px 20px rgba(255, 107, 53, 0.5);
+    }
+
+    .btn-secondary {
+      background: var(--bg-card);
+      color: var(--text-primary);
+      border-color: var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-light);
+    }
+
+    .btn-danger {
+      background: rgba(255, 82, 82, 0.15);
+      color: var(--danger);
+      border-color: rgba(255, 82, 82, 0.3);
+    }
+
+    .btn-danger:hover {
+      background: rgba(255, 82, 82, 0.25);
+    }
+
+    .btn-upload {
+      background: rgba(64, 196, 255, 0.1);
+      color: var(--info);
+      border-color: rgba(64, 196, 255, 0.3);
+    }
+
+    .btn-upload:hover {
+      background: rgba(64, 196, 255, 0.2);
+    }
+
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    .controls-sep {
+      width: 1px;
+      height: 28px;
+      background: var(--border);
+    }
+
+    .file-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-left: 4px;
+      max-width: 150px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* ═══════════════ 视频区域 ═══════════════ */
+    .video-section {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .video-main {
+      position: relative;
+    }
+
+    .video-main .card-body {
+      padding: 0;
+    }
+
+    .video-main img {
+      width: 100%;
+      display: block;
+      border-radius: 0 0 var(--radius) var(--radius);
+      background: #111;
+      aspect-ratio: 640/480;
+      object-fit: contain;
+    }
+
+    .video-secondary {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .video-secondary img {
+      width: 100%;
+      display: block;
+      border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+      background: #111;
+      aspect-ratio: 640/480;
+      object-fit: contain;
+    }
+
+    /* ═══════════════ 右侧面板 ═══════════════ */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    /* ─── 投篮状态卡片 ─── */
+    .shot-detection-card .phase-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .phase-idle {
+      background: rgba(95, 99, 104, 0.2);
+      color: var(--text-muted);
+    }
+
+    .phase-rising {
+      background: rgba(255, 193, 7, 0.2);
+      color: #ffc107;
+    }
+
+    .phase-tracking {
+      background: rgba(255, 107, 53, 0.2);
+      color: var(--accent);
+    }
+
+    .phase-cooldown {
+      background: rgba(64, 196, 255, 0.2);
+      color: var(--info);
+    }
+
+    /* ─── 得分统计 ─── */
+    .score-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .score-item {
+      text-align: center;
+      padding: 14px 8px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      transition: var(--transition);
+    }
+
+    .score-item:hover {
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .score-value {
+      font-size: 28px;
+      font-weight: 800;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .score-value.scored {
+      color: var(--success);
+    }
+
+    .score-value.total {
+      color: var(--accent);
+    }
+
+    .score-value.accuracy {
+      color: var(--info);
+    }
+
+    .score-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* ─── 最近一投 ─── */
+    .last-shot-content {
+      margin-top: 8px;
+    }
+
+    .last-shot-result {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      margin-bottom: 10px;
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .last-shot-result.scored {
+      background: rgba(0, 230, 118, 0.1);
+      border: 1px solid rgba(0, 230, 118, 0.3);
+      color: var(--success);
+    }
+
+    .last-shot-result.missed {
+      background: rgba(255, 82, 82, 0.1);
+      border: 1px solid rgba(255, 82, 82, 0.3);
+      color: var(--danger);
+    }
+
+    .shot-detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .shot-detail-item {
+      padding: 8px 12px;
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+
+    .shot-detail-value {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .shot-detail-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* ─── 投篮历史 ─── */
+    .history-list {
+      max-height: 200px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    .history-list::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    .history-list::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    .history-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 7px 10px;
+      border-radius: 6px;
+      margin-bottom: 4px;
+      font-size: 12px;
+      transition: var(--transition);
+    }
+
+    .history-item:hover {
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .history-item .num {
+      color: var(--text-muted);
+      font-weight: 600;
+      width: 28px;
+    }
+
+    .history-item .result-badge {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 700;
+      font-size: 11px;
+    }
+
+    .result-badge.scored {
+      background: rgba(0, 230, 118, 0.15);
+      color: var(--success);
+    }
+
+    .result-badge.missed {
+      background: rgba(255, 82, 82, 0.15);
+      color: var(--danger);
+    }
+
+    .history-item .time {
+      color: var(--text-muted);
+    }
+
+    .history-item .arc {
+      color: var(--text-secondary);
+    }
+
+    .empty-msg {
+      text-align: center;
+      padding: 20px;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    /* ─── 系统信息 ─── */
+    .sys-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+
+    .sys-item {
+      text-align: center;
+      padding: 10px 6px;
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+
+    .sys-value {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1;
+      margin-bottom: 3px;
+    }
+
+    .sys-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    /* ═══════════════ 动画 ═══════════════ */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .card {
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    /* ═══════════════ 响应式 ═══════════════ */
+    @media (max-width: 1100px) {
+      .main {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        order: -1;
+      }
+
+      .video-secondary {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .topbar {
+        padding: 0 12px;
+      }
+
+      .main {
+        padding: 10px;
+      }
+
+      .controls-bar {
+        gap: 6px;
+      }
+
+      .btn {
+        padding: 6px 12px;
+        font-size: 12px;
+      }
+
+      .score-value {
+        font-size: 22px;
+      }
+    }
+  </style>
 </head>
+
 <body>
 
-<!-- =============== TOAST =============== -->
-<div id="toast" class="toast"></div>
-
-<!-- =============== TOP BAR =============== -->
-<header class="topbar">
-  <div class="logo"><span>🏀</span> Basketball Shot Detection</div>
-  <div class="controls">
-    <button id="btnStart" class="btn primary" onclick="apiStart()">▶ Start</button>
-    <button id="btnPause" class="btn warn" onclick="apiPause()" disabled>⏸ Pause</button>
-    <button id="btnStop"  class="btn danger" onclick="apiStop()" disabled>⏹ Stop</button>
-    <label class="upload-label" id="uploadLabel">
-      📁 Upload Video
-      <input type="file" id="fileInput" accept=".avi,.mp4,.mov,.mkv,.flv,.wmv" onchange="apiUpload(this)">
-    </label>
+  <!-- ═══ 预处理遮罩 ═══ -->
+  <div id="preprocess-overlay">
+    <div class="preprocess-box">
+      <div class="spinner"></div>
+      <h2>🏀 视频预处理中</h2>
+      <p>正在逐帧检测目标并构建轨迹，请稍候...</p>
+      <div id="preprocess-msg">初始化中...</div>
+      <div class="progress-bar-outer">
+        <div class="progress-bar-inner" id="preprocess-bar"></div>
+      </div>
+    </div>
   </div>
-  <div class="conn">
-    <span class="conn-dot" id="connDot"></span>
-    <span id="connText">Connecting…</span>
+
+  <!-- ═══ 顶部栏 ═══ -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <span class="topbar-logo">🏀</span>
+      <div>
+        <div class="topbar-title">AI 篮球投篮分析系统</div>
+        <div class="topbar-subtitle">实时双目视觉 · 深度学习目标检测 · 投篮轨迹分析</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="status-indicator">
+        <span class="dot" id="status-dot"></span>
+        <span id="status-text">就绪</span>
+      </div>
+      <div class="device-badge">
+        <span class="device-dot"></span>
+        <span id="device-name">检测中...</span>
+      </div>
+    </div>
   </div>
-</header>
 
-<!-- =============== PROGRESS =============== -->
-<div class="progress-bar"><div class="fill" id="progressFill" style="width:0%"></div></div>
+  <!-- ═══ 主内容 ═══ -->
+  <div class="main">
 
-<!-- =============== MAIN =============== -->
-<div class="main">
+    <!-- ─── 左侧: 视频+控制 ─── -->
+    <div class="video-section">
 
-  <!-- ===== Videos ===== -->
-  <section class="video-grid">
-    <div class="video-card">
-      <div class="vid-header">
-        <h3>📷 Left Camera</h3>
-        <span class="badge" id="badgeLeft">LIVE</span>
+      <!-- 控制栏 -->
+      <div class="controls-bar">
+        <button class="btn btn-primary" id="btn-start" onclick="startDetection()">
+          ▶ 开始分析
+        </button>
+        <button class="btn btn-secondary" id="btn-pause" onclick="togglePause()" disabled>
+          ⏸ 暂停
+        </button>
+        <button class="btn btn-danger" id="btn-stop" onclick="stopDetection()" disabled>
+          ⏹ 停止
+        </button>
+        <div class="controls-sep"></div>
+        <button class="btn btn-upload" onclick="document.getElementById('file-input').click()">
+          📁 选择视频
+        </button>
+        <input type="file" id="file-input" accept=".avi,.mp4,.mov,.mkv,.flv,.wmv" style="display:none"
+          onchange="uploadVideo(this)">
+        <span class="file-label" id="file-label">ball.avi</span>
       </div>
-      <img id="vidLeft" alt="Left camera feed">
-    </div>
-    <div class="video-card">
-      <div class="vid-header">
-        <h3>📷 Right Camera</h3>
-        <span class="badge" id="badgeRight">LIVE</span>
+
+      <!-- 主视频(左相机+轨迹) -->
+      <div class="card video-main">
+        <div class="card-header">
+          <span class="card-header-title">
+            <span class="icon">📹</span> 左相机 · 轨迹追踪
+          </span>
+          <span class="card-header-title" style="color:var(--accent);" id="frame-info">
+            帧: 0/0
+          </span>
+        </div>
+        <div class="card-body">
+          <img id="video-left" src="" alt="左相机画面">
+        </div>
       </div>
-      <img id="vidRight" alt="Right camera feed">
-    </div>
-    <div class="video-card">
-      <div class="vid-header">
-        <h3>🌈 Depth View</h3>
-        <span class="badge" id="badgeDepth">LIVE</span>
-      </div>
-      <img id="vidDepth" alt="Depth view">
-    </div>
-  </section>
 
-  <!-- ===== Info Panels ===== -->
-  <section class="info-grid">
-
-    <!-- Status Panel -->
-    <div class="card" id="statusPanel">
-      <h3><span class="icon">📊</span> System Status</h3>
-      <div class="metrics">
-        <div class="metric"><span class="label">Status</span>       <span class="value" id="mStatus">—</span></div>
-        <div class="metric"><span class="label">FPS</span>          <span class="value highlight" id="mFps">0</span></div>
-        <div class="metric"><span class="label">Frame</span>        <span class="value" id="mFrame">0 / 0</span></div>
-        <div class="metric"><span class="label">Process Time</span> <span class="value" id="mTime">0 ms</span></div>
-        <div class="metric"><span class="label">GPU Memory</span>   <span class="value" id="mGpu">—</span></div>
-        <div class="metric"><span class="label">Device</span>       <span class="value" id="mDevice">—</span></div>
-        <div class="metric"><span class="label">CUDA</span>         <span class="value" id="mCuda">—</span></div>
-        <div class="metric"><span class="label">🏀 Basketballs</span><span class="value success" id="mBalls">0</span></div>
-        <div class="metric"><span class="label">🥅 Hoops</span>     <span class="value warning" id="mHoops">0</span></div>
-        <div class="metric"><span class="label">📁 Video</span>     <span class="value" id="mVideo">—</span></div>
-      </div>
-    </div>
-
-    <!-- Shot Analysis Panel -->
-    <div class="card" id="shotPanel">
-      <h3><span class="icon">🎯</span> Shot Analysis <span class="pulse-dot" id="shotActiveDot"></span></h3>
-
-      <!-- Score indicator -->
-      <div class="score-badge waiting" id="scoreBadge">Waiting for shot…</div>
-
-      <div class="metrics">
-        <div class="metric"><span class="label">Active Shot</span>   <span class="value" id="sActive">No</span></div>
-        <div class="metric"><span class="label">Speed</span>         <span class="value highlight" id="sSpeed">— m/s</span></div>
-        <div class="metric"><span class="label">Angle</span>         <span class="value highlight" id="sAngle">— °</span></div>
-        <div class="metric"><span class="label">Shot XYZ</span>      <span class="value" id="sShotPos">—</span></div>
-        <div class="metric"><span class="label">Hoop XYZ</span>      <span class="value" id="sHoopPos">—</span></div>
-        <div class="metric"><span class="label">Seq Length</span>    <span class="value" id="sSeqLen">—</span></div>
-        <div class="metric"><span class="label">Analysis Time</span> <span class="value" id="sTime">—</span></div>
+      <!-- 副视频(右相机+深度图) -->
+      <div class="video-secondary">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-header-title">
+              <span class="icon">📷</span> 右相机
+            </span>
+          </div>
+          <div class="card-body" style="padding:0">
+            <img id="video-right" src="" alt="右相机画面">
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <span class="card-header-title">
+              <span class="icon">🌈</span> 深度图
+            </span>
+          </div>
+          <div class="card-body" style="padding:0">
+            <img id="video-depth" src="" alt="深度图">
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- Trajectory Panel -->
-    <div class="card" id="trajPanel">
-      <h3><span class="icon">📈</span> Trajectory (X–Z Plane)</h3>
-      <div class="traj-wrap" id="trajWrap">
-        <canvas id="trajCanvas" width="520" height="340"></canvas>
-        <div class="traj-empty" id="trajEmpty">No trajectory data — waiting for shot</div>
+    <!-- ─── 右侧: 数据面板 ─── -->
+    <div class="sidebar">
+
+      <!-- 投篮检测状态 -->
+      <div class="card shot-detection-card">
+        <div class="card-header">
+          <span class="card-header-title">
+            <span class="icon">🎯</span> 投篮检测
+          </span>
+          <span class="phase-badge phase-idle" id="phase-badge">等待中</span>
+        </div>
+        <div class="card-body">
+          <div class="score-grid">
+            <div class="score-item">
+              <div class="score-value scored" id="scored-count">0</div>
+              <div class="score-label">命中</div>
+            </div>
+            <div class="score-item">
+              <div class="score-value total" id="total-shots">0</div>
+              <div class="score-label">出手</div>
+            </div>
+            <div class="score-item">
+              <div class="score-value accuracy" id="accuracy">0%</div>
+              <div class="score-label">命中率</div>
+            </div>
+          </div>
+        </div>
       </div>
+
+      <!-- 最近一投 -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-header-title">
+            <span class="icon">📊</span> 最近一投
+          </span>
+        </div>
+        <div class="card-body">
+          <div class="last-shot-content" id="last-shot-content">
+            <div class="empty-msg">等待投篮中...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 投篮历史 -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-header-title">
+            <span class="icon">📜</span> 投篮历史
+          </span>
+          <span style="font-size:12px;color:var(--text-muted)" id="history-count">0 次</span>
+        </div>
+        <div class="card-body" style="padding:8px 12px">
+          <div class="history-list" id="history-list">
+            <div class="empty-msg">暂无投篮记录</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 系统状态 -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-header-title">
+            <span class="icon">⚙️</span> 系统状态
+          </span>
+        </div>
+        <div class="card-body">
+          <div class="sys-grid">
+            <div class="sys-item">
+              <div class="sys-value" id="sys-fps">0</div>
+              <div class="sys-label">FPS</div>
+            </div>
+            <div class="sys-item">
+              <div class="sys-value" id="sys-latency">0</div>
+              <div class="sys-label">延迟 (ms)</div>
+            </div>
+            <div class="sys-item">
+              <div class="sys-value" id="sys-gpu">-</div>
+              <div class="sys-label">GPU (GB)</div>
+            </div>
+            <div class="sys-item">
+              <div class="sys-value" id="sys-ball">0</div>
+              <div class="sys-label">篮球</div>
+            </div>
+            <div class="sys-item">
+              <div class="sys-value" id="sys-hoop">0</div>
+              <div class="sys-label">篮筐</div>
+            </div>
+            <div class="sys-item">
+              <div class="sys-value" id="sys-frame">0</div>
+              <div class="sys-label">当前帧</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
-  </section>
+  </div>
 
-  <!-- ===== Shot History ===== -->
-  <section class="history" id="historySection">
-    <h3><span>📋</span> Shot History</h3>
-    <div class="history-list" id="historyList">
-      <div style="color:var(--txt3);font-size:.82rem;padding:8px">No shots recorded yet</div>
-    </div>
-  </section>
+  <script>
+    /* ═══════════════ 前端逻辑 ═══════════════ */
+    const API = '';
+    let pollTimer = null;
+    let isRunning = false;
+    let isPaused = false;
 
-</div>
+    // ─── 视频流 ───
+    function startStreams() {
+      const ts = Date.now();
+      document.getElementById('video-left').src = `${API}/api/video_feed/left?t=${ts}`;
+      document.getElementById('video-right').src = `${API}/api/video_feed/right?t=${ts}`;
+      document.getElementById('video-depth').src = `${API}/api/video_feed/depth?t=${ts}`;
+    }
+    function stopStreams() {
+      document.getElementById('video-left').src = '';
+      document.getElementById('video-right').src = '';
+      document.getElementById('video-depth').src = '';
+    }
 
-<script>
-/* ====================================================================
-   STATE
-   ==================================================================== */
-const S = {
-  running: false,
-  paused: false,
-  connected: false,
-  pollTimer: null,
-  lastAnalysisTime: null,
-  shotHistory: [],        // [{is_scored, speed, angle, time}, ...]
-  failCount: 0,
-  streamsActive: false,
-};
+    // ─── 控制 ───
+    async function startDetection() {
+      try {
+        const res = await fetch(`${API}/api/start`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          isRunning = true; isPaused = false;
+          updateButtons();
+          startStreams();
+          startPolling();
+        }
+      } catch (e) { console.error(e); }
+    }
 
-const POLL_MS = 350;
-const MAX_HISTORY = 20;
-const API = '';           // same-origin
+    async function togglePause() {
+      try {
+        const res = await fetch(`${API}/api/pause`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          isPaused = data.paused;
+          updateButtons();
+        }
+      } catch (e) { console.error(e); }
+    }
 
-/* ====================================================================
-   HELPERS
-   ==================================================================== */
-function $(id){ return document.getElementById(id) }
-function setText(id,v){ const e=$(id); if(e) e.textContent=v }
-function setClass(el,cls,on){ if(typeof el==='string') el=$(el); el.classList.toggle(cls,on) }
+    async function stopDetection() {
+      try {
+        await fetch(`${API}/api/stop`, { method: 'POST' });
+        isRunning = false; isPaused = false;
+        updateButtons();
+        stopPolling();
+        stopStreams();
+      } catch (e) { console.error(e); }
+    }
 
-function showToast(msg, type, duration=3500){
-  const t=$('toast');
-  t.textContent=msg;
-  t.className='toast '+type+' show';
-  clearTimeout(t._tid);
-  t._tid=setTimeout(()=>t.classList.remove('show'), duration);
-}
+    async function uploadVideo(input) {
+      if (!input.files.length) return;
+      const file = input.files[0];
+      const fd = new FormData();
+      fd.append('video', file);
+      try {
+        const res = await fetch(`${API}/api/upload`, { method: 'POST', body: fd });
+        const data = await res.json();
+        if (data.success) {
+          document.getElementById('file-label').textContent = data.filename;
+        } else {
+          alert(data.message || '上传失败');
+        }
+      } catch (e) { alert('上传出错'); }
+      input.value = '';
+    }
 
-function fmtXYZ(obj){
-  if(!obj) return '—';
-  return `(${n(obj.x)}, ${n(obj.y)}, ${n(obj.z)})`;
-}
-function n(v,d=2){ return v!=null ? Number(v).toFixed(d) : '—' }
+    function updateButtons() {
+      const start = document.getElementById('btn-start');
+      const pause = document.getElementById('btn-pause');
+      const stop = document.getElementById('btn-stop');
+      start.disabled = isRunning;
+      pause.disabled = !isRunning;
+      stop.disabled = !isRunning;
+      pause.innerHTML = isPaused ? '▶ 继续' : '⏸ 暂停';
 
-/* ====================================================================
-   VIDEO STREAM MANAGEMENT
-   ==================================================================== */
-function startStreams(){
-  if(S.streamsActive) return;
-  const ts = Date.now();
-  $('vidLeft').src  = API+'/api/video_feed/left?t='+ts;
-  $('vidRight').src = API+'/api/video_feed/right?t='+ts;
-  $('vidDepth').src = API+'/api/video_feed/depth?t='+ts;
-  S.streamsActive = true;
+      const dot = document.getElementById('status-dot');
+      const txt = document.getElementById('status-text');
+      dot.className = 'dot' + (isRunning ? (isPaused ? ' paused' : ' running') : '');
+      txt.textContent = isRunning ? (isPaused ? '已暂停' : '运行中') : '就绪';
+    }
 
-  // Auto-reconnect on error
-  ['vidLeft','vidRight','vidDepth'].forEach(id=>{
-    const img = $(id);
-    img.onerror = ()=>{
-      setTimeout(()=>{
-        const stream = id.replace('vid','').toLowerCase();
-        img.src = API+'/api/video_feed/'+stream+'?t='+Date.now();
-      }, 2000);
+    // ─── 轮询 ───
+    function startPolling() { stopPolling(); pollTimer = setInterval(pollStatus, 400); }
+    function stopPolling() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
+
+    const phaseMap = {
+      idle: { text: '等待中', cls: 'phase-idle' },
+      rising: { text: '上升中...', cls: 'phase-rising' },
+      tracking: { text: '追踪中!', cls: 'phase-tracking' },
+      cooldown: { text: '冷却中', cls: 'phase-cooldown' },
+      preprocessing: { text: '预处理', cls: 'phase-idle' },
     };
-  });
-}
 
-function stopStreams(){
-  ['vidLeft','vidRight','vidDepth'].forEach(id=>{ $(id).src=''; $(id).onerror=null; });
-  S.streamsActive = false;
-}
+    async function pollStatus() {
+      try {
+        const res = await fetch(`${API}/api/status`);
+        const data = await res.json();
+        if (!data.success) return;
 
-/* ====================================================================
-   API CALLS
-   ==================================================================== */
-async function apiStart(){
-  try{
-    const r=await fetch(API+'/api/start',{method:'POST'});
-    const d=await r.json();
-    if(d.success){
-      S.running=true; S.paused=false;
+        const s = data.stats;
+        const shot = data.shot_info;
+
+        // 运行状态
+        isRunning = data.is_running;
+        isPaused = data.is_paused;
+        updateButtons();
+
+        if (!data.is_running && !data.is_preprocessing) {
+          stopPolling();
+          return;
+        }
+
+        // 预处理遮罩
+        const overlay = document.getElementById('preprocess-overlay');
+        if (data.is_preprocessing) {
+          overlay.classList.add('active');
+          document.getElementById('preprocess-msg').textContent =
+            data.preprocess_progress || '处理中...';
+          const pct = s.total_frames > 0
+            ? (s.current_frame / s.total_frames * 100) : 0;
+          document.getElementById('preprocess-bar').style.width = pct + '%';
+        } else {
+          overlay.classList.remove('active');
+        }
+
+        // 设备名
+        document.getElementById('device-name').textContent = data.device || 'CPU';
+
+        // 帧信息
+        document.getElementById('frame-info').textContent =
+          `帧: ${s.current_frame}/${s.total_frames}`;
+
+        // 投篮阶段徽章
+        const pi = phaseMap[shot.phase] || phaseMap.idle;
+        const badge = document.getElementById('phase-badge');
+        badge.textContent = pi.text;
+        badge.className = 'phase-badge ' + pi.cls;
+
+        // 得分统计
+        document.getElementById('scored-count').textContent = shot.total_scored;
+        document.getElementById('total-shots').textContent = shot.total_shots;
+        document.getElementById('accuracy').textContent = shot.accuracy || '0%';
+
+        // 最近一投
+        updateLastShot(shot.last_shot);
+
+        // 历史列表
+        updateHistory(shot.shot_history);
+        document.getElementById('history-count').textContent =
+          `${(shot.shot_history || []).length} 次`;
+
+        // 系统状态
+        document.getElementById('sys-fps').textContent = s.fps || 0;
+        document.getElementById('sys-latency').textContent = s.process_time || 0;
+        document.getElementById('sys-gpu').textContent =
+          s.gpu_memory > 0 ? s.gpu_memory : '-';
+        document.getElementById('sys-ball').textContent = s.basketball_count || 0;
+        document.getElementById('sys-hoop').textContent = s.hoops_count || 0;
+        document.getElementById('sys-frame').textContent = s.current_frame || 0;
+
+      } catch (e) { /* 忽略网络错误 */ }
+    }
+
+    function updateLastShot(shot) {
+      const el = document.getElementById('last-shot-content');
+      if (!shot) {
+        el.innerHTML = '<div class="empty-msg">等待投篮中...</div>';
+        return;
+      }
+      const isScored = shot.is_scored;
+      el.innerHTML = `
+        <div class="last-shot-result ${isScored ? 'scored' : 'missed'}">
+            ${isScored ? '✅ 命中！' : '❌ 未中'}
+        </div>
+        <div class="shot-detail-grid">
+            <div class="shot-detail-item">
+                <div class="shot-detail-value">${shot.arc_height ?? '-'}</div>
+                <div class="shot-detail-label">弧高 (px)</div>
+            </div>
+            <div class="shot-detail-item">
+                <div class="shot-detail-value">${shot.duration ?? '-'}s</div>
+                <div class="shot-detail-label">飞行时间</div>
+            </div>
+            <div class="shot-detail-item">
+                <div class="shot-detail-value">
+                    ${shot.release ? shot.release[0] + ', ' + shot.release[1] : '-'}
+                </div>
+                <div class="shot-detail-label">出手位置</div>
+            </div>
+            <div class="shot-detail-item">
+                <div class="shot-detail-value">
+                    ${shot.apex ? shot.apex[0] + ', ' + shot.apex[1] : '-'}
+                </div>
+                <div class="shot-detail-label">弧顶位置</div>
+            </div>
+        </div>
+    `;
+    }
+
+    function updateHistory(history) {
+      const el = document.getElementById('history-list');
+      if (!history || history.length === 0) {
+        el.innerHTML = '<div class="empty-msg">暂无投篮记录</div>';
+        return;
+      }
+      // 倒序：最新的在顶部
+      const items = [...history].reverse();
+      let html = '';
+      items.forEach((h, i) => {
+        const num = history.length - i;
+        const scored = h.is_scored;
+        html += `
+            <div class="history-item">
+                <span class="num">#${num}</span>
+                <span class="result-badge ${scored ? 'scored' : 'missed'}">
+                    ${scored ? '命中' : '未中'}
+                </span>
+                <span class="arc">弧高 ${h.arc_height ?? '-'} px</span>
+                <span class="time">${h.time || ''}</span>
+            </div>
+        `;
+      });
+      el.innerHTML = html;
+    }
+
+    // ─── 初始化 ───
+    document.addEventListener('DOMContentLoaded', () => {
       updateButtons();
-      startStreams();
+      // 启动轮询以检测后端初始状态
       startPolling();
-      showToast('✅ Detection started','scored');
-    } else {
-      showToast('⚠ '+d.message,'missed');
-    }
-  }catch(e){ showToast('❌ Connection error','missed') }
-}
-
-async function apiPause(){
-  try{
-    const r=await fetch(API+'/api/pause',{method:'POST'});
-    const d=await r.json();
-    if(d.success){
-      S.paused=d.paused;
-      updateButtons();
-      showToast(S.paused?'⏸ Paused':'▶ Resumed', S.paused?'missed':'scored');
-    }
-  }catch(e){ showToast('❌ Connection error','missed') }
-}
-
-async function apiStop(){
-  try{
-    await fetch(API+'/api/stop',{method:'POST'});
-    S.running=false; S.paused=false;
-    updateButtons();
-    showToast('⏹ Detection stopped','missed');
-  }catch(e){ showToast('❌ Connection error','missed') }
-}
-
-async function apiUpload(input){
-  const file = input.files[0];
-  if(!file) return;
-  const fd = new FormData();
-  fd.append('video', file);
-  $('uploadLabel').style.opacity='0.5';
-  try{
-    const r=await fetch(API+'/api/upload',{method:'POST',body:fd});
-    const d=await r.json();
-    if(d.success){
-      showToast('📁 Uploaded: '+d.filename,'scored');
-    } else {
-      showToast('⚠ '+d.message,'missed');
-    }
-  }catch(e){ showToast('❌ Upload failed','missed') }
-  $('uploadLabel').style.opacity='1';
-  input.value='';
-}
-
-/* ====================================================================
-   POLLING
-   ==================================================================== */
-function startPolling(){
-  if(S.pollTimer) return;
-  S.pollTimer = setInterval(poll, POLL_MS);
-  poll(); // immediate first
-}
-
-function stopPolling(){
-  if(S.pollTimer){ clearInterval(S.pollTimer); S.pollTimer=null }
-}
-
-async function poll(){
-  try{
-    const [statusRes, shotRes] = await Promise.all([
-      fetch(API+'/api/status'),
-      fetch(API+'/api/shot_analysis'),
-    ]);
-    const status = await statusRes.json();
-    const shot   = await shotRes.json();
-    S.failCount=0;
-    updateConnection(true);
-    updateStatusUI(status);
-    updateShotUI(shot);
-  }catch(e){
-    S.failCount++;
-    if(S.failCount>5) updateConnection(false);
-  }
-}
-
-/* ====================================================================
-   UI UPDATES
-   ==================================================================== */
-function updateConnection(ok){
-  S.connected=ok;
-  setClass('connDot','on',ok);
-  setClass('connDot','off',!ok);
-  setText('connText', ok?'Connected':'Disconnected');
-}
-
-function updateButtons(){
-  $('btnStart').disabled = S.running;
-  $('btnPause').disabled = !S.running;
-  $('btnStop').disabled  = !S.running;
-  $('btnPause').textContent = S.paused ? '▶ Resume' : '⏸ Pause';
-}
-
-function updateStatusUI(d){
-  if(!d||!d.success) return;
-  S.running = d.is_running;
-  S.paused  = d.is_paused;
-  updateButtons();
-
-  const s = d.stats||{};
-
-  // status label
-  let label='Stopped', cls='';
-  if(S.running && S.paused){ label='Paused'; cls='warning' }
-  else if(S.running){ label='Running'; cls='success' }
-  else { label='Stopped'; cls='error' }
-  const mst=$('mStatus');
-  mst.textContent=label;
-  mst.className='value '+(cls||'');
-
-  setText('mFps',   n(s.fps,1));
-  setText('mFrame', `${s.current_frame||0} / ${s.total_frames||'?'}`);
-  setText('mTime',  `${s.process_time||0} ms`);
-  setText('mGpu',   s.gpu_memory ? n(s.gpu_memory)+' GB' : '—');
-  setText('mDevice',d.device||'—');
-  setText('mCuda',  d.cuda_version||'—');
-  setText('mBalls', s.basketball_count||0);
-  setText('mHoops', s.hoops_count||0);
-  setText('mVideo', s.current_video||'—');
-
-  // progress bar
-  const pct = s.total_frames>0 ? (s.current_frame/s.total_frames*100) : 0;
-  $('progressFill').style.width = pct.toFixed(1)+'%';
-
-  // ensure streams
-  if(S.running && !S.streamsActive) startStreams();
-}
-
-function updateShotUI(d){
-  if(!d) return;
-
-  // Active dot
-  const active = !!d.is_active_shot;
-  setClass('shotActiveDot','active', active);
-  const sa=$('sActive');
-  sa.textContent = active?'Yes — tracking':'No';
-  sa.className = 'value '+(active?'warning':'');
-
-  // Score badge
-  const badge=$('scoreBadge');
-  const hasShot = d.analysis_time!=null;
-
-  if(!hasShot){
-    badge.className='score-badge waiting';
-    badge.textContent='Waiting for shot…';
-  } else if(d.is_scored){
-    badge.className='score-badge scored';
-    badge.textContent='🏀  SCORED!';
-  } else {
-    badge.className='score-badge missed';
-    badge.textContent='❌  MISSED';
-  }
-
-  // Metrics
-  setText('sSpeed', d.shot_speed ? n(d.shot_speed)+' m/s' : '— m/s');
-  setText('sAngle', d.shot_angle ? n(d.shot_angle)+' °' : '— °');
-  setText('sShotPos', fmtXYZ(d.shot_position));
-  setText('sHoopPos', fmtXYZ(d.hoop_position));
-  setText('sSeqLen',  d.sequence_length!=null ? d.sequence_length : '—');
-  setText('sTime',    d.analysis_time ? formatTime(d.analysis_time) : '—');
-
-  // Detect new shot (analysis_time changed)
-  if(hasShot && d.analysis_time !== S.lastAnalysisTime){
-    S.lastAnalysisTime = d.analysis_time;
-    addShotHistory(d);
-    showToast(
-      d.is_scored ? '🏀 SCORED!  Speed '+n(d.shot_speed)+' m/s' : '❌ MISSED  Speed '+n(d.shot_speed)+' m/s',
-      d.is_scored ? 'scored' : 'missed'
-    );
-  }
-
-  // Trajectory
-  drawTrajectory(d);
-}
-
-function formatTime(t){
-  if(!t) return '—';
-  // t is ISO string from backend
-  try{
-    const dt=new Date(t);
-    if(isNaN(dt)) return String(t);
-    return dt.toLocaleTimeString();
-  }catch(e){ return String(t) }
-}
-
-/* ====================================================================
-   SHOT HISTORY
-   ==================================================================== */
-function addShotHistory(d){
-  S.shotHistory.unshift({
-    is_scored: d.is_scored,
-    speed: d.shot_speed,
-    angle: d.shot_angle,
-    time: d.analysis_time,
-  });
-  if(S.shotHistory.length > MAX_HISTORY) S.shotHistory.pop();
-  renderHistory();
-}
-
-function renderHistory(){
-  const list=$('historyList');
-  if(S.shotHistory.length===0){
-    list.innerHTML='<div style="color:var(--txt3);font-size:.82rem;padding:8px">No shots recorded yet</div>';
-    return;
-  }
-  list.innerHTML = S.shotHistory.map((h,i)=>{
-    const cls = h.is_scored?'scored-item':'missed-item';
-    const icon = h.is_scored?'🏀':'❌';
-    return `<div class="history-item ${cls}">
-      <div style="font-weight:700;margin-bottom:4px">${icon} #${S.shotHistory.length-i}</div>
-      <div class="hi-label">Speed</div><div class="hi-value">${n(h.speed)} m/s</div>
-      <div class="hi-label">Angle</div><div class="hi-value">${n(h.angle)}°</div>
-      <div class="hi-label">Time</div><div class="hi-value" style="font-size:.7rem">${formatTime(h.time)}</div>
-    </div>`;
-  }).join('');
-}
-
-/* ====================================================================
-   TRAJECTORY CANVAS
-   ==================================================================== */
-function drawTrajectory(shotData){
-  const canvas = $('trajCanvas');
-  const ctx = canvas.getContext('2d');
-  const predicted = shotData.predicted_trajectory || [];
-  const actual    = shotData.actual_trajectory    || [];   // may not exist yet
-  const shotPos   = shotData.shot_position;
-  const hoopPos   = shotData.hoop_position;
-
-  const hasData = predicted.length>1 || actual.length>1;
-  $('trajEmpty').style.display = hasData ? 'none' : 'flex';
-  if(!hasData){
-    // Draw empty state
-    const dpr = window.devicePixelRatio||1;
-    canvas.width  = canvas.clientWidth  * dpr;
-    canvas.height = canvas.clientHeight * dpr;
-    ctx.setTransform(dpr,0,0,dpr,0,0);
-    ctx.clearRect(0,0,canvas.clientWidth,canvas.clientHeight);
-    return;
-  }
-
-  // HiDPI
-  const dpr = window.devicePixelRatio||1;
-  const W = canvas.clientWidth;
-  const H = canvas.clientHeight;
-  canvas.width  = W*dpr;
-  canvas.height = H*dpr;
-  ctx.setTransform(dpr,0,0,dpr,0,0);
-
-  // Collect all points for auto-scaling
-  let pts = [];
-  predicted.forEach(p=>pts.push(p));
-  actual.forEach(p=>pts.push(p));
-  if(shotPos && shotPos.x!=null) pts.push([shotPos.x, shotPos.z]);
-  if(hoopPos && hoopPos.x!=null) pts.push([hoopPos.x, hoopPos.z]);
-
-  if(pts.length<2) return;
-
-  let minX=Infinity, maxX=-Infinity, minZ=Infinity, maxZ=-Infinity;
-  pts.forEach(([x,z])=>{ minX=Math.min(minX,x); maxX=Math.max(maxX,x); minZ=Math.min(minZ,z); maxZ=Math.max(maxZ,z) });
-
-  const padX = Math.max((maxX-minX)*0.18, 0.3);
-  const padZ = Math.max((maxZ-minZ)*0.18, 0.3);
-  minX-=padX; maxX+=padX; minZ-=padZ; maxZ+=padZ;
-
-  // Margins
-  const M={t:24,r:20,b:38,l:50};
-  const pW=W-M.l-M.r, pH=H-M.t-M.b;
-
-  const sx = x=> M.l + ((x-minX)/(maxX-minX))*pW;
-  const sz = z=> M.t + pH - ((z-minZ)/(maxZ-minZ))*pH;
-
-  // Background
-  ctx.fillStyle='#0f1520';
-  ctx.fillRect(0,0,W,H);
-
-  // Grid
-  ctx.strokeStyle='#1e293b';
-  ctx.lineWidth=0.5;
-  const gridNx=6, gridNz=5;
-  for(let i=0;i<=gridNx;i++){
-    const v=minX+i*(maxX-minX)/gridNx;
-    const px=sx(v);
-    ctx.beginPath(); ctx.moveTo(px,M.t); ctx.lineTo(px,M.t+pH); ctx.stroke();
-    ctx.fillStyle='#475569'; ctx.font='10px sans-serif'; ctx.textAlign='center';
-    ctx.fillText(n(v,1), px, H-M.b+14);
-  }
-  for(let i=0;i<=gridNz;i++){
-    const v=minZ+i*(maxZ-minZ)/gridNz;
-    const py=sz(v);
-    ctx.beginPath(); ctx.moveTo(M.l,py); ctx.lineTo(M.l+pW,py); ctx.stroke();
-    ctx.fillStyle='#475569'; ctx.font='10px sans-serif'; ctx.textAlign='right';
-    ctx.fillText(n(v,1), M.l-6, py+4);
-  }
-
-  // Axis labels
-  ctx.fillStyle='#64748b'; ctx.font='11px sans-serif'; ctx.textAlign='center';
-  ctx.fillText('X (m)', M.l+pW/2, H-4);
-  ctx.save();
-  ctx.translate(12, M.t+pH/2);
-  ctx.rotate(-Math.PI/2);
-  ctx.fillText('Z (m)',0,0);
-  ctx.restore();
-
-  // Draw actual trajectory (if available)
-  if(actual.length>1){
-    ctx.strokeStyle='rgba(148,163,184,0.6)';
-    ctx.lineWidth=1.5;
-    ctx.setLineDash([5,4]);
-    ctx.beginPath();
-    ctx.moveTo(sx(actual[0][0]), sz(actual[0][1]));
-    for(let i=1;i<actual.length;i++) ctx.lineTo(sx(actual[i][0]), sz(actual[i][1]));
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    // dots
-    ctx.fillStyle='rgba(148,163,184,0.8)';
-    actual.forEach(([x,z])=>{
-      ctx.beginPath(); ctx.arc(sx(x),sz(z),2.5,0,Math.PI*2); ctx.fill();
     });
-  }
+  </script>
 
-  // Draw predicted trajectory
-  if(predicted.length>1){
-    // glow
-    ctx.strokeStyle='rgba(59,130,246,0.15)';
-    ctx.lineWidth=8;
-    ctx.beginPath();
-    ctx.moveTo(sx(predicted[0][0]), sz(predicted[0][1]));
-    for(let i=1;i<predicted.length;i++) ctx.lineTo(sx(predicted[i][0]), sz(predicted[i][1]));
-    ctx.stroke();
-
-    // main line
-    ctx.strokeStyle='#3b82f6';
-    ctx.lineWidth=2.5;
-    ctx.beginPath();
-    ctx.moveTo(sx(predicted[0][0]), sz(predicted[0][1]));
-    for(let i=1;i<predicted.length;i++) ctx.lineTo(sx(predicted[i][0]), sz(predicted[i][1]));
-    ctx.stroke();
-
-    // dots
-    ctx.fillStyle='#60a5fa';
-    predicted.forEach(([x,z])=>{
-      ctx.beginPath(); ctx.arc(sx(x),sz(z),3,0,Math.PI*2); ctx.fill();
-    });
-  }
-
-  // Hoop marker
-  if(hoopPos && hoopPos.x!=null){
-    const hx=sx(hoopPos.x), hz=sz(hoopPos.z);
-    // ring
-    ctx.strokeStyle='#ef4444'; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.arc(hx,hz,9,0,Math.PI*2); ctx.stroke();
-    ctx.fillStyle='rgba(239,68,68,0.2)';
-    ctx.beginPath(); ctx.arc(hx,hz,9,0,Math.PI*2); ctx.fill();
-    // label
-    ctx.fillStyle='#fca5a5'; ctx.font='bold 10px sans-serif'; ctx.textAlign='left';
-    ctx.fillText('Hoop', hx+14, hz+4);
-  }
-
-  // Shot position marker
-  if(shotPos && shotPos.x!=null){
-    const spx=sx(shotPos.x), spz=sz(shotPos.z);
-    // diamond
-    ctx.fillStyle='#22c55e';
-    ctx.beginPath();
-    ctx.moveTo(spx,spz-7); ctx.lineTo(spx+7,spz); ctx.lineTo(spx,spz+7); ctx.lineTo(spx-7,spz);
-    ctx.closePath(); ctx.fill();
-    // label
-    ctx.fillStyle='#86efac'; ctx.font='bold 10px sans-serif'; ctx.textAlign='left';
-    ctx.fillText('Shot', spx+10, spz+4);
-  }
-
-  // Legend
-  const lx=M.l+8, ly=M.t+8;
-  ctx.font='10px sans-serif';
-  if(predicted.length>0){
-    ctx.fillStyle='#3b82f6';
-    ctx.fillRect(lx,ly,16,3);
-    ctx.fillStyle='#94a3b8';
-    ctx.textAlign='left';
-    ctx.fillText('Predicted', lx+20, ly+5);
-  }
-  if(actual.length>0){
-    ctx.strokeStyle='rgba(148,163,184,0.6)';
-    ctx.setLineDash([4,3]); ctx.lineWidth=1.5;
-    ctx.beginPath(); ctx.moveTo(lx,ly+16); ctx.lineTo(lx+16,ly+16); ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillStyle='#94a3b8'; ctx.textAlign='left';
-    ctx.fillText('Actual', lx+20, ly+19);
-  }
-}
-
-/* ====================================================================
-   KEYBOARD SHORTCUTS
-   ==================================================================== */
-document.addEventListener('keydown', e=>{
-  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA') return;
-  if(e.code==='Space'){
-    e.preventDefault();
-    if(!S.running) apiStart(); else apiPause();
-  }
-  if(e.code==='Escape'){ e.preventDefault(); apiStop() }
-});
-
-/* ====================================================================
-   CANVAS RESIZE
-   ==================================================================== */
-function resizeCanvas(){
-  const wrap=$('trajWrap');
-  const canvas=$('trajCanvas');
-  canvas.style.width  = wrap.clientWidth+'px';
-  canvas.style.height = Math.max(wrap.clientHeight, 240)+'px';
-}
-window.addEventListener('resize', resizeCanvas);
-
-/* ====================================================================
-   INIT
-   ==================================================================== */
-(function init(){
-  updateButtons();
-  resizeCanvas();
-  startStreams();
-  startPolling();
-})();
-</script>
 </body>
+
 </html>
