@@ -48,27 +48,27 @@
 
 通过双目摄像头（或双目合拍视频）获取三维空间信息，利用 YOLOv11 检测篮球和篮筐，结合自研的鲁棒轨迹分析算法，实时计算：
 
-| 指标 | 说明 |
-| ---- | ---- |
+| 指标       | 说明                                         |
+| ---------- | -------------------------------------------- |
 | 🎯 进球判定 | 基于 3D 空间穿越算法，检测球是否通过篮圈平面 |
-| 💨 出手速度 | 通过 3D 轨迹时序回归精确估算（m/s） |
-| 📐 出手角度 | X-Z 平面内的初始飞行角度（°） |
-| 📈 飞行轨迹 | 鲁棒加权二次曲线拟合 + 预测延伸 |
-| 📍 3D 坐标 | 球和篮筐的实时三维位置（m） |
+| 💨 出手速度 | 通过 3D 轨迹时序回归精确估算（m/s）          |
+| 📐 出手角度 | X-Z 平面内的初始飞行角度（°）                |
+| 📈 飞行轨迹 | 鲁棒加权二次曲线拟合 + 预测延伸              |
+| 📍 3D 坐标  | 球和篮筐的实时三维位置（m）                  |
 
 ---
 
 ## ✨ 核心特性
 
-| 特性 | 说明 |
-|------|------|
-| 🎯 **YOLO 目标检测** | 基于 YOLOv11 自定义模型，精准检测篮球和篮筐 |
-| 📷 **双目立体视觉** | 利用双目相机标定参数，进行立体校正与深度估计 |
-| 🔁 **离线预处理管线** | 四阶段流水线：逐帧检测 → 跨帧跟踪 → 轨迹平滑 → 插值补帧 |
-| 🏀 **智能投篮检测** | 五阶段状态机（IDLE → RISING → TRACKING → RESULT → COOLDOWN） |
-| 📊 **命中判定** | 基于轨迹穿越篮筐平面检测，支持空心球/打板球/弹框球判定 |
-| 🌐 **Web 可视化** | Flask + MJPEG 实时推流，响应式前端界面 |
-| 📈 **实时统计** | FPS、延迟、GPU 显存、命中率等数据实时显示 |
+| 特性                 | 说明                                                         |
+| -------------------- | ------------------------------------------------------------ |
+| 🎯 **YOLO 目标检测**  | 基于 YOLOv11 自定义模型，精准检测篮球和篮筐                  |
+| 📷 **双目立体视觉**   | 利用双目相机标定参数，进行立体校正与深度估计                 |
+| 🔁 **离线预处理管线** | 四阶段流水线：逐帧检测 → 跨帧跟踪 → 轨迹平滑 → 插值补帧      |
+| 🏀 **智能投篮检测**   | 五阶段状态机（IDLE → RISING → TRACKING → RESULT → COOLDOWN） |
+| 📊 **命中判定**       | 基于轨迹穿越篮筐平面检测，支持空心球/打板球/弹框球判定       |
+| 🌐 **Web 可视化**     | Flask + MJPEG 实时推流，响应式前端界面                       |
+| 📈 **实时统计**       | FPS、延迟、GPU 显存、命中率等数据实时显示                    |
 
 ### 设计亮点
 
@@ -120,12 +120,12 @@ TrajectoryAnalyzer 分析 → ShotResult
     └─ 5. 速度/角度估计（末尾8点线性回归）
 ```
 
-| 算法组件 | 作用 | 参数 |
-| -------- | ---- | ---- |
-| MAD 去噪 | 去除跳变噪声点 | `outlier_mad_z=4.5` |
-| Savitzky-Golay | 平滑轨迹，保持峰值 | `window=7, poly=2` |
-| IRLS + Huber | 对残余噪声鲁棒的曲线拟合 | `huber_k=1.5, iters=8` |
-| 线性回归估速 | 用末尾K点回归，比差分更稳定 | `K=8` |
+| 算法组件       | 作用                        | 参数                   |
+| -------------- | --------------------------- | ---------------------- |
+| MAD 去噪       | 去除跳变噪声点              | `outlier_mad_z=4.5`    |
+| Savitzky-Golay | 平滑轨迹，保持峰值          | `window=7, poly=2`     |
+| IRLS + Huber   | 对残余噪声鲁棒的曲线拟合    | `huber_k=1.5, iters=8` |
+| 线性回归估速   | 用末尾K点回归，比差分更稳定 | `K=8`                  |
 
 ---
 
@@ -203,24 +203,24 @@ basketball-shot-analysis/
 
 ## ⚙️ 环境要求
 
-| 项目 | 最低要求 | 推荐配置 |
-|------|---------|---------|
-| **操作系统** | Windows 10 / Ubuntu 20.04 | Windows 11 / Ubuntu 22.04 |
-| **Python** | 3.9 | 3.10 – 3.12 |
-| **GPU** | — (可用CPU) | NVIDIA GTX 1060+ (6GB+显存) |
-| **CUDA** | — | CUDA 12.1 + cuDNN 8.x |
-| **内存** | 8 GB | 16 GB+ |
-| **硬盘** | 10 GB 可用空间 | 20 GB+ |
-| **CPU** | 4 核 | 8 核+ |
+| 项目         | 最低要求                  | 推荐配置                    |
+| ------------ | ------------------------- | --------------------------- |
+| **操作系统** | Windows 10 / Ubuntu 20.04 | Windows 11 / Ubuntu 22.04   |
+| **Python**   | 3.9                       | 3.10 – 3.12                 |
+| **GPU**      | — (可用CPU)               | NVIDIA GTX 1060+ (6GB+显存) |
+| **CUDA**     | —                         | CUDA 12.1 + cuDNN 8.x       |
+| **内存**     | 8 GB                      | 16 GB+                      |
+| **硬盘**     | 10 GB 可用空间            | 20 GB+                      |
+| **CPU**      | 4 核                      | 8 核+                       |
 
 ### GPU 加速（强烈推荐）
 
-| 组件 | 要求 |
-| ---- | ---- |
-| **GPU** | NVIDIA GPU（GTX 1060 及以上） |
-| **VRAM** | 4 GB+（推荐 8 GB+） |
+| 组件     | 要求                             |
+| -------- | -------------------------------- |
+| **GPU**  | NVIDIA GPU（GTX 1060 及以上）    |
+| **VRAM** | 4 GB+（推荐 8 GB+）              |
 | **CUDA** | 12.1+（由 install.bat 自动匹配） |
-| **驱动** | NVIDIA Driver 525.0+ |
+| **驱动** | NVIDIA Driver 525.0+             |
 
 > ⚠️ **CPU 模式警告**：无 GPU 时系统可运行但 FPS 极低（<5 FPS），不适合实时检测
 
@@ -356,17 +356,17 @@ python app.py
 
 ## 🔌 API 接口文档
 
-| 端点 | 方法 | 说明 |
-| ---- | ---- | ---- |
-| `/api/start` | POST | 启动检测 |
-| `/api/pause` | POST | 暂停/恢复 |
-| `/api/stop` | POST | 停止检测 |
-| `/api/status` | GET | 获取系统状态 |
-| `/api/shot_analysis` | GET | 获取投篮分析数据 |
-| `/api/upload` | POST | 上传视频文件 |
-| `/api/video_feed/left` | GET | 左相机 MJPEG 流 |
-| `/api/video_feed/right` | GET | 右相机 MJPEG 流 |
-| `/api/video_feed/depth` | GET | 深度图 MJPEG 流 |
+| 端点                    | 方法 | 说明             |
+| ----------------------- | ---- | ---------------- |
+| `/api/start`            | POST | 启动检测         |
+| `/api/pause`            | POST | 暂停/恢复        |
+| `/api/stop`             | POST | 停止检测         |
+| `/api/status`           | GET  | 获取系统状态     |
+| `/api/shot_analysis`    | GET  | 获取投篮分析数据 |
+| `/api/upload`           | POST | 上传视频文件     |
+| `/api/video_feed/left`  | GET  | 左相机 MJPEG 流  |
+| `/api/video_feed/right` | GET  | 右相机 MJPEG 流  |
+| `/api/video_feed/depth` | GET  | 深度图 MJPEG 流  |
 
 ### `/api/status` 响应示例
 
@@ -451,21 +451,21 @@ class EngineConfig:
 
 ### `engine/models.py` — 数据结构
 
-| 类 | 字段 | 说明 |
-| -- | ---- | ---- |
-| `Detection3D` | cls, conf, bbox, xyz, distance | 单目标检测结果+3D坐标 |
-| `FrameDetections` | frame_id, timestamp, detections | 单帧所有检测结果 |
-| `ShotResult` | is_scored, speed, angle, trajectory | 完整投篮分析结果 |
-| `ShotState` | is_active, points, hoop_history | 投篮状态机内部状态 |
+| 类                | 字段                                | 说明                  |
+| ----------------- | ----------------------------------- | --------------------- |
+| `Detection3D`     | cls, conf, bbox, xyz, distance      | 单目标检测结果+3D坐标 |
+| `FrameDetections` | frame_id, timestamp, detections     | 单帧所有检测结果      |
+| `ShotResult`      | is_scored, speed, angle, trajectory | 完整投篮分析结果      |
+| `ShotState`       | is_active, points, hoop_history     | 投篮状态机内部状态    |
 
 ### 离线预处理管线 (`preprocessor.py`)
 
-| 阶段 | 功能 | 说明 |
-| ---- | ---- | ---- |
-| Phase 1 | YOLO 逐帧检测 | 每帧编码为 JPG 再解码，模拟图片输入减少噪声 |
-| Phase 2 | 跨帧 IoU 关联 | 贪心匹配算法，基于 IoU + 中心距离构建目标轨迹 |
-| Phase 3 | 轨迹平滑 | 中位数滤波去噪 → 滑动平均平滑 → 线性插值补缺 |
-| Phase 4 | 格式导出 | 同帧同类去重，输出 `{frame_id: [StableDetection2D]}` |
+| 阶段    | 功能          | 说明                                                 |
+| ------- | ------------- | ---------------------------------------------------- |
+| Phase 1 | YOLO 逐帧检测 | 每帧编码为 JPG 再解码，模拟图片输入减少噪声          |
+| Phase 2 | 跨帧 IoU 关联 | 贪心匹配算法，基于 IoU + 中心距离构建目标轨迹        |
+| Phase 3 | 轨迹平滑      | 中位数滤波去噪 → 滑动平均平滑 → 线性插值补缺         |
+| Phase 4 | 格式导出      | 同帧同类去重，输出 `{frame_id: [StableDetection2D]}` |
 
 ### 投篮检测状态机 (`shot_engine.py`)
 
@@ -532,10 +532,10 @@ T = np.array([-基线距离_mm, ty, tz])
 
 本系统使用 [Ultralytics YOLO](https://github.com/ultralytics/ultralytics) 框架，检测类别为：
 
-| 类别 ID | 类别名 | 说明 |
-| ------- | ------ | ---- |
-| 0 | hoop | 篮筐 |
-| 1 | basketball | 篮球 |
+| 类别 ID | 类别名     | 说明 |
+| ------- | ---------- | ---- |
+| 0       | hoop       | 篮筐 |
+| 1       | basketball | 篮球 |
 
 如需自行训练模型，请参考 Ultralytics 官方文档准备数据集并训练：
 
@@ -549,23 +549,23 @@ yolo train model=yolo11n.pt data=basketball.yaml epochs=100 imgsz=640
 
 ### 📋 错误速查表
 
-| 错误关键词 | 快速解决 |
-| ---------- | -------- |
-| `'python' 不是内部命令` | 重装 Python，勾选 Add to PATH |
-| `No module named 'cv2'` | `pip install opencv-contrib-python` |
-| `No module named 'torch'` | 重新安装 PyTorch |
-| `cuda.is_available() = False` | 更新 NVIDIA 驱动 / 重装 GPU 版 PyTorch |
-| `DLL load failed` | 安装 VC++ 运行时 |
-| `Address already in use` | `taskkill /F /IM python.exe` |
-| `Out of memory` | 降低 `imgsz` 到 320 |
-| `numpy has no attribute 'bool'` | `pip install numpy==1.26.4` |
-| `Model file not found` | 将 best.pt 放到项目根目录 |
-| `Video width < 1280` | 确认视频为双目拼接格式（1280×480） |
-| `413 Request Entity Too Large` | 增大 `MAX_CONTENT_LENGTH` |
-| `ReadTimeoutError` | 使用清华镜像安装 |
-| `Microsoft Visual C++ required` | 安装 VS Build Tools |
-| `No module named 'flask_cors'` | `pip install Flask-Cors` |
-| `Permission denied` | 以管理员身份运行 |
+| 错误关键词                      | 快速解决                               |
+| ------------------------------- | -------------------------------------- |
+| `'python' 不是内部命令`         | 重装 Python，勾选 Add to PATH          |
+| `No module named 'cv2'`         | `pip install opencv-contrib-python`    |
+| `No module named 'torch'`       | 重新安装 PyTorch                       |
+| `cuda.is_available() = False`   | 更新 NVIDIA 驱动 / 重装 GPU 版 PyTorch |
+| `DLL load failed`               | 安装 VC++ 运行时                       |
+| `Address already in use`        | `taskkill /F /IM python.exe`           |
+| `Out of memory`                 | 降低 `imgsz` 到 320                    |
+| `numpy has no attribute 'bool'` | `pip install numpy==1.26.4`            |
+| `Model file not found`          | 将 best.pt 放到项目根目录              |
+| `Video width < 1280`            | 确认视频为双目拼接格式（1280×480）     |
+| `413 Request Entity Too Large`  | 增大 `MAX_CONTENT_LENGTH`              |
+| `ReadTimeoutError`              | 使用清华镜像安装                       |
+| `Microsoft Visual C++ required` | 安装 VS Build Tools                    |
+| `No module named 'flask_cors'`  | `pip install Flask-Cors`               |
+| `Permission denied`             | 以管理员身份运行                       |
 
 <details>
 <summary><b>Q: 提示 CUDA 不可用？</b></summary>
@@ -667,13 +667,13 @@ print('Read OK:', ret, '| Shape:', frame.shape if ret else 'N/A')
 
 ## 📊 性能参考
 
-| 硬件配置 | FPS（imgsz=640） | FPS（imgsz=320） | 延迟 |
-| -------- | ---------------- | ---------------- | ---- |
-| RTX 4090 + i9 | ~65 FPS | ~120 FPS | <16ms |
-| RTX 3080 + i7 | ~42 FPS | ~85 FPS | ~24ms |
-| RTX 2070 + i7 | ~28 FPS | ~55 FPS | ~36ms |
-| GTX 1660 + i5 | ~18 FPS | ~35 FPS | ~55ms |
-| CPU only (i7) | ~3 FPS | ~6 FPS | >300ms |
+| 硬件配置      | FPS（imgsz=640） | FPS（imgsz=320） | 延迟   |
+| ------------- | ---------------- | ---------------- | ------ |
+| RTX 4090 + i9 | ~65 FPS          | ~120 FPS         | <16ms  |
+| RTX 3080 + i7 | ~42 FPS          | ~85 FPS          | ~24ms  |
+| RTX 2070 + i7 | ~28 FPS          | ~55 FPS          | ~36ms  |
+| GTX 1660 + i5 | ~18 FPS          | ~35 FPS          | ~55ms  |
+| CPU only (i7) | ~3 FPS           | ~6 FPS           | >300ms |
 
 > **推荐**：至少使用 GTX 1660 级别 GPU，实时检测需要 ≥ 20 FPS
 
