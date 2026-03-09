@@ -1,88 +1,165 @@
-<!-- static/index.html -->
-
 <!DOCTYPE html>
 <html lang="zh-CN">
 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🏀 AI 篮球投篮分析系统</title>
+  <title>HOOP.AI — 篮球智能分析系统</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Noto+Sans+SC:wght@300;400;500;700&display=swap"
+    rel="stylesheet">
   <style>
-    /* ═══════════════ 全局样式 ═══════════════ */
+    /* ═══════════════════════════════════════════
+       DESIGN SYSTEM — Cyber Court
+    ═══════════════════════════════════════════ */
     :root {
-      --bg-primary: #0f1923;
-      --bg-secondary: #1a2634;
-      --bg-card: #1e2d3d;
-      --bg-card-hover: #243447;
-      --accent: #ff6b35;
-      --accent-light: #ff8c5a;
-      --accent-dark: #e55a25;
-      --success: #00e676;
-      --success-dim: #00c853;
-      --danger: #ff5252;
-      --danger-dim: #e04545;
-      --info: #40c4ff;
-      --info-dim: #29b6f6;
-      --text-primary: #e8eaed;
-      --text-secondary: #9aa0a6;
-      --text-muted: #5f6368;
-      --border: #2d3f50;
-      --border-light: #3a4f63;
-      --shadow: rgba(0, 0, 0, 0.4);
-      --radius: 12px;
-      --radius-sm: 8px;
-      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      --void: #050a0f;
+      --deep: #080f18;
+      --surface: #0c1621;
+      --panel: #0f1e2e;
+      --panel-hi: #142333;
+      --rim: #1a2f44;
+      --rim-hi: #21384f;
+
+      --neon: #00e5ff;
+      --neon-dim: #00b8cc;
+      --neon-glow: rgba(0, 229, 255, 0.15);
+      --plasma: #ff6b00;
+      --plasma-dim: #cc5500;
+      --plasma-glow: rgba(255, 107, 0, 0.15);
+      --acid: #39ff14;
+      --acid-dim: #2acc10;
+      --crimson: #ff2d55;
+      --gold: #ffd700;
+
+      --txt: #d0e8f0;
+      --txt-dim: #7a9ab0;
+      --txt-ghost: #3d5a6e;
+
+      --radius: 6px;
+      --radius-lg: 12px;
+      --ease: cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    * {
+    *,
+    *::before,
+    *::after {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
 
-    body {
-      font-family: -apple-system, 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei',
-        'Segoe UI', Roboto, sans-serif;
-      background: var(--bg-primary);
-      color: var(--text-primary);
-      line-height: 1.6;
-      overflow-x: hidden;
+    html {
+      scroll-behavior: smooth;
     }
 
-    /* ═══════════════ 预处理遮罩 ═══════════════ */
-    #preprocess-overlay {
+    body {
+      font-family: 'Noto Sans SC', sans-serif;
+      background: var(--void);
+      color: var(--txt);
+      min-height: 100vh;
+      overflow-x: hidden;
+      cursor: default;
+    }
+
+    /* scanline overlay */
+    body::after {
+      content: '';
       position: fixed;
       inset: 0;
-      background: rgba(15, 25, 35, 0.95);
-      z-index: 1000;
+      z-index: 9999;
+      pointer-events: none;
+      background: repeating-linear-gradient(0deg,
+          transparent,
+          transparent 2px,
+          rgba(0, 0, 0, 0.04) 2px,
+          rgba(0, 0, 0, 0.04) 4px);
+    }
+
+    /* ─── NOISE TEXTURE ─── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      opacity: 0.5;
+    }
+
+    /* ───────────────────────────────────────
+       PREPROCESS OVERLAY
+    ─────────────────────────────────────── */
+    #overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 2000;
+      background: rgba(5, 10, 15, 0.96);
+      backdrop-filter: blur(20px);
       display: none;
       align-items: center;
       justify-content: center;
-      backdrop-filter: blur(12px);
+      flex-direction: column;
+      gap: 32px;
     }
 
-    #preprocess-overlay.active {
+    #overlay.active {
       display: flex;
     }
 
-    .preprocess-box {
-      text-align: center;
-      padding: 48px 60px;
-      background: var(--bg-card);
-      border-radius: 20px;
-      border: 1px solid var(--border);
-      box-shadow: 0 20px 60px var(--shadow);
-      max-width: 500px;
+    .ov-ring {
+      position: relative;
+      width: 100px;
+      height: 100px;
     }
 
-    .preprocess-box .spinner {
-      width: 60px;
-      height: 60px;
-      border: 4px solid var(--border);
-      border-top-color: var(--accent);
+    .ov-ring svg {
+      animation: spin 1.4s linear infinite;
+    }
+
+    .ov-ring-inner {
+      position: absolute;
+      inset: 18px;
+      border: 2px solid var(--plasma);
+      border-top-color: transparent;
       border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin: 0 auto 24px;
+      animation: spin 0.9s linear infinite reverse;
+    }
+
+    .ov-label {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: 4px;
+      color: var(--neon);
+      text-transform: uppercase;
+      text-shadow: 0 0 20px var(--neon);
+    }
+
+    .ov-msg {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 13px;
+      color: var(--txt-dim);
+      letter-spacing: 1px;
+      min-height: 18px;
+    }
+
+    .ov-bar-outer {
+      width: 320px;
+      height: 3px;
+      background: var(--rim);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .ov-bar-inner {
+      height: 100%;
+      background: linear-gradient(90deg, var(--neon-dim), var(--neon));
+      box-shadow: 0 0 8px var(--neon);
+      border-radius: 2px;
+      width: 0%;
+      transition: width 0.4s var(--ease);
     }
 
     @keyframes spin {
@@ -91,579 +168,819 @@
       }
     }
 
-    .preprocess-box h2 {
-      font-size: 22px;
-      font-weight: 600;
-      color: var(--accent);
-      margin-bottom: 12px;
-    }
-
-    .preprocess-box p {
-      color: var(--text-secondary);
-      font-size: 14px;
-      margin-top: 8px;
-    }
-
-    #preprocess-msg {
-      color: var(--text-primary);
-      font-size: 15px;
-      margin-top: 16px;
-      min-height: 20px;
-    }
-
-    .progress-bar-outer {
-      width: 100%;
-      height: 6px;
-      background: var(--border);
-      border-radius: 3px;
-      margin-top: 20px;
-      overflow: hidden;
-    }
-
-    .progress-bar-inner {
-      height: 100%;
-      background: linear-gradient(90deg, var(--accent), var(--accent-light));
-      border-radius: 3px;
-      width: 0%;
-      transition: width 0.3s;
-    }
-
-    /* ═══════════════ 顶部栏 ═══════════════ */
+    /* ───────────────────────────────────────
+       TOPBAR
+    ─────────────────────────────────────── */
     .topbar {
-      background: var(--bg-secondary);
-      border-bottom: 1px solid var(--border);
-      padding: 0 24px;
-      height: 64px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
       position: sticky;
       top: 0;
       z-index: 100;
-      box-shadow: 0 2px 12px var(--shadow);
-    }
-
-    .topbar-left {
+      height: 56px;
+      background: rgba(8, 15, 24, 0.92);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(0, 229, 255, 0.12);
       display: flex;
       align-items: center;
-      gap: 14px;
+      padding: 0 24px;
+      gap: 0;
+      box-shadow: 0 1px 0 rgba(0, 229, 255, 0.06), 0 4px 24px rgba(0, 0, 0, 0.5);
     }
 
-    .topbar-logo {
-      font-size: 28px;
-      filter: drop-shadow(0 0 8px rgba(255, 107, 53, 0.4));
-    }
-
-    .topbar-title {
-      font-size: 18px;
+    .logo-mark {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 22px;
       font-weight: 700;
-      background: linear-gradient(135deg, var(--accent), var(--accent-light));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      letter-spacing: 3px;
+      color: var(--neon);
+      text-shadow: 0 0 16px rgba(0, 229, 255, 0.6);
+      margin-right: 8px;
     }
 
-    .topbar-subtitle {
+    .logo-sep {
+      width: 1px;
+      height: 28px;
+      background: linear-gradient(to bottom, transparent, var(--neon-dim), transparent);
+      margin: 0 16px;
+    }
+
+    .logo-sub {
       font-size: 11px;
-      color: var(--text-muted);
-      margin-top: -2px;
+      color: var(--txt-ghost);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .topbar-center {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+    }
+
+    .frame-ticker {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 12px;
+      color: var(--txt-dim);
+      background: var(--surface);
+      border: 1px solid var(--rim);
+      padding: 4px 14px;
+      border-radius: 20px;
+      letter-spacing: 1px;
     }
 
     .topbar-right {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 14px;
     }
 
-    .device-badge {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-size: 12px;
-      color: var(--text-secondary);
+    .status-pill {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 7px;
+      padding: 4px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--rim);
+      background: var(--surface);
+      font-size: 12px;
+      color: var(--txt-dim);
+      letter-spacing: 1px;
+      font-family: 'Share Tech Mono', monospace;
+      transition: all 0.3s var(--ease);
     }
 
-    .device-dot {
+    .status-pip {
       width: 7px;
       height: 7px;
       border-radius: 50%;
-      background: var(--success);
-      animation: pulse 2s infinite;
+      background: var(--txt-ghost);
+      transition: all 0.3s var(--ease);
     }
 
-    @keyframes pulse {
+    .status-pill.running {
+      border-color: rgba(57, 255, 20, 0.3);
+      color: var(--acid);
+    }
+
+    .status-pill.running .status-pip {
+      background: var(--acid);
+      box-shadow: 0 0 8px var(--acid);
+      animation: blink 1.5s ease infinite;
+    }
+
+    .status-pill.paused {
+      border-color: rgba(255, 215, 0, 0.3);
+      color: var(--gold);
+    }
+
+    .status-pill.paused .status-pip {
+      background: var(--gold);
+      box-shadow: 0 0 8px var(--gold);
+    }
+
+    @keyframes blink {
 
       0%,
       100% {
-        opacity: 1;
+        opacity: 1
       }
 
       50% {
-        opacity: 0.4;
+        opacity: 0.4
       }
     }
 
-    .status-indicator {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 13px;
-      color: var(--text-secondary);
+    .device-chip {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      color: var(--plasma);
+      border: 1px solid rgba(255, 107, 0, 0.3);
+      background: rgba(255, 107, 0, 0.06);
+      padding: 3px 10px;
+      border-radius: 4px;
+      letter-spacing: 1px;
     }
 
-    .status-indicator .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--text-muted);
-      transition: var(--transition);
-    }
-
-    .status-indicator .dot.running {
-      background: var(--success);
-      box-shadow: 0 0 8px var(--success);
-    }
-
-    .status-indicator .dot.paused {
-      background: #ffc107;
-      box-shadow: 0 0 8px #ffc107;
-    }
-
-    /* ═══════════════ 主内容 ═══════════════ */
-    .main {
+    /* ───────────────────────────────────────
+       MAIN LAYOUT
+    ─────────────────────────────────────── */
+    .layout {
       display: grid;
-      grid-template-columns: 1fr 340px;
-      gap: 16px;
-      padding: 16px 20px;
-      min-height: calc(100vh - 64px);
+      grid-template-columns: 1fr 320px;
+      grid-template-rows: auto 1fr;
+      gap: 12px;
+      padding: 14px 16px;
+      min-height: calc(100vh - 56px);
+      position: relative;
+      z-index: 1;
     }
 
-    /* ═══════════════ 卡片 ═══════════════ */
-    .card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-      transition: var(--transition);
-    }
-
-    .card:hover {
-      border-color: var(--border-light);
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    }
-
-    .card-header {
-      padding: 12px 16px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: rgba(255, 255, 255, 0.02);
-    }
-
-    .card-header-title {
-      font-size: 13px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: var(--text-secondary);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .card-header-title .icon {
-      font-size: 15px;
-    }
-
-    .card-body {
-      padding: 16px;
-    }
-
-    /* ═══════════════ 控制栏 ═══════════════ */
-    .controls-bar {
+    /* ───────────────────────────────────────
+       CONTROL BAR
+    ─────────────────────────────────────── */
+    .ctrl-bar {
+      grid-column: 1 / -1;
+      background: var(--surface);
+      border: 1px solid var(--rim);
+      border-radius: var(--radius-lg);
+      padding: 10px 16px;
       display: flex;
       align-items: center;
       gap: 10px;
       flex-wrap: wrap;
-      padding: 12px 16px;
-      background: var(--bg-secondary);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      margin-bottom: 16px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
     }
 
     .btn {
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 600;
+      font-size: 13px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 7px 18px;
+      border-radius: var(--radius);
+      border: 1px solid transparent;
+      cursor: pointer;
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 8px 18px;
-      border-radius: var(--radius-sm);
-      font-size: 13px;
-      font-weight: 600;
-      border: 1px solid transparent;
-      cursor: pointer;
-      transition: var(--transition);
-      font-family: inherit;
+      transition: all 0.2s var(--ease);
       white-space: nowrap;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(255, 255, 255, 0);
+      transition: background 0.2s;
+    }
+
+    .btn:hover::before {
+      background: rgba(255, 255, 255, 0.05);
     }
 
     .btn:active {
       transform: scale(0.96);
     }
 
-    .btn-primary {
-      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
-      color: #fff;
-      border-color: var(--accent);
-      box-shadow: 0 2px 12px rgba(255, 107, 53, 0.3);
-    }
-
-    .btn-primary:hover {
-      background: linear-gradient(135deg, var(--accent-light), var(--accent));
-      box-shadow: 0 4px 20px rgba(255, 107, 53, 0.5);
-    }
-
-    .btn-secondary {
-      background: var(--bg-card);
-      color: var(--text-primary);
-      border-color: var(--border);
-    }
-
-    .btn-secondary:hover {
-      background: var(--bg-card-hover);
-      border-color: var(--border-light);
-    }
-
-    .btn-danger {
-      background: rgba(255, 82, 82, 0.15);
-      color: var(--danger);
-      border-color: rgba(255, 82, 82, 0.3);
-    }
-
-    .btn-danger:hover {
-      background: rgba(255, 82, 82, 0.25);
-    }
-
-    .btn-upload {
-      background: rgba(64, 196, 255, 0.1);
-      color: var(--info);
-      border-color: rgba(64, 196, 255, 0.3);
-    }
-
-    .btn-upload:hover {
-      background: rgba(64, 196, 255, 0.2);
-    }
-
     .btn:disabled {
-      opacity: 0.45;
+      opacity: 0.3;
       cursor: not-allowed;
       transform: none !important;
     }
 
-    .controls-sep {
-      width: 1px;
-      height: 28px;
-      background: var(--border);
+    .btn-go {
+      background: linear-gradient(135deg, rgba(0, 229, 255, 0.15), rgba(0, 229, 255, 0.08));
+      color: var(--neon);
+      border-color: rgba(0, 229, 255, 0.4);
+      box-shadow: 0 0 16px rgba(0, 229, 255, 0.1), inset 0 1px 0 rgba(0, 229, 255, 0.1);
     }
 
-    .file-label {
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-left: 4px;
-      max-width: 150px;
+    .btn-go:not(:disabled):hover {
+      box-shadow: 0 0 24px rgba(0, 229, 255, 0.25), inset 0 1px 0 rgba(0, 229, 255, 0.15);
+      border-color: rgba(0, 229, 255, 0.7);
+    }
+
+    .btn-pause {
+      background: rgba(255, 215, 0, 0.08);
+      color: var(--gold);
+      border-color: rgba(255, 215, 0, 0.3);
+    }
+
+    .btn-pause:not(:disabled):hover {
+      box-shadow: 0 0 16px rgba(255, 215, 0, 0.15);
+    }
+
+    .btn-stop {
+      background: rgba(255, 45, 85, 0.08);
+      color: var(--crimson);
+      border-color: rgba(255, 45, 85, 0.3);
+    }
+
+    .btn-stop:not(:disabled):hover {
+      box-shadow: 0 0 16px rgba(255, 45, 85, 0.15);
+    }
+
+    .btn-upload {
+      background: rgba(255, 107, 0, 0.08);
+      color: var(--plasma);
+      border-color: rgba(255, 107, 0, 0.3);
+    }
+
+    .btn-upload:not(:disabled):hover {
+      box-shadow: 0 0 16px rgba(255, 107, 0, 0.15);
+    }
+
+    .ctrl-sep {
+      width: 1px;
+      height: 26px;
+      background: var(--rim);
+      margin: 0 2px;
+    }
+
+    .file-name {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      color: var(--txt-ghost);
+      max-width: 160px;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
 
-    /* ═══════════════ 视频区域 ═══════════════ */
-    .video-section {
+    /* ───────────────────────────────────────
+       PANEL (generic card)
+    ─────────────────────────────────────── */
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--rim);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      transition: border-color 0.3s;
+    }
+
+    .panel:hover {
+      border-color: var(--rim-hi);
+    }
+
+    .panel-head {
+      padding: 9px 14px;
+      border-bottom: 1px solid var(--rim);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(255, 255, 255, 0.015);
+    }
+
+    .panel-head-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-tag {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--txt-dim);
+    }
+
+    .panel-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--neon);
+      box-shadow: 0 0 6px var(--neon);
+    }
+
+    .panel-badge {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 3px;
+    }
+
+    .panel-body {
+      padding: 14px;
+    }
+
+    /* ───────────────────────────────────────
+       VIDEO COLUMN
+    ─────────────────────────────────────── */
+    .video-col {
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 12px;
     }
 
-    .video-main {
-      position: relative;
-    }
-
-    .video-main .card-body {
+    .video-main-panel .panel-body {
       padding: 0;
     }
 
-    .video-main img {
+    .video-main-panel img {
       width: 100%;
       display: block;
-      border-radius: 0 0 var(--radius) var(--radius);
-      background: #111;
-      aspect-ratio: 640/480;
+      border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+      background: #000;
+      aspect-ratio: 4/3;
       object-fit: contain;
     }
 
-    .video-secondary {
+    /* HUD overlay on video */
+    .video-wrap {
+      position: relative;
+    }
+
+    .video-hud {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      right: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      pointer-events: none;
+    }
+
+    .hud-badge {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 1px;
+      background: rgba(5, 10, 15, 0.75);
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(0, 229, 255, 0.2);
+      border-radius: 4px;
+      padding: 4px 10px;
+      color: var(--neon);
+    }
+
+    .hud-phase {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      background: rgba(5, 10, 15, 0.75);
+      backdrop-filter: blur(6px);
+      border-radius: 4px;
+      padding: 5px 12px;
+      border: 1px solid transparent;
+      text-transform: uppercase;
+    }
+
+    .hud-phase.ph-idle {
+      color: var(--txt-ghost);
+      border-color: var(--rim);
+    }
+
+    .hud-phase.ph-rising {
+      color: var(--gold);
+      border-color: rgba(255, 215, 0, 0.4);
+      text-shadow: 0 0 10px var(--gold);
+    }
+
+    .hud-phase.ph-tracking {
+      color: var(--plasma);
+      border-color: rgba(255, 107, 0, 0.5);
+      text-shadow: 0 0 10px var(--plasma);
+    }
+
+    .hud-phase.ph-cooldown {
+      color: var(--neon);
+      border-color: rgba(0, 229, 255, 0.4);
+      text-shadow: 0 0 10px var(--neon);
+    }
+
+    /* sub videos */
+    .video-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 12px;
     }
 
-    .video-secondary img {
+    .video-sub-panel .panel-body {
+      padding: 0;
+    }
+
+    .video-sub-panel img {
       width: 100%;
       display: block;
-      border-radius: 0 0 var(--radius-sm) var(--radius-sm);
-      background: #111;
-      aspect-ratio: 640/480;
+      border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+      background: #000;
+      aspect-ratio: 4/3;
       object-fit: contain;
     }
 
-    /* ═══════════════ 右侧面板 ═══════════════ */
+    /* ───────────────────────────────────────
+       SIDEBAR
+    ─────────────────────────────────────── */
     .sidebar {
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 12px;
     }
 
-    /* ─── 投篮状态卡片 ─── */
-    .shot-detection-card .phase-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      padding: 3px 10px;
-      border-radius: 12px;
-      font-size: 12px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-
-    .phase-idle {
-      background: rgba(95, 99, 104, 0.2);
-      color: var(--text-muted);
-    }
-
-    .phase-rising {
-      background: rgba(255, 193, 7, 0.2);
-      color: #ffc107;
-    }
-
-    .phase-tracking {
-      background: rgba(255, 107, 53, 0.2);
-      color: var(--accent);
-    }
-
-    .phase-cooldown {
-      background: rgba(64, 196, 255, 0.2);
-      color: var(--info);
-    }
-
-    /* ─── 得分统计 ─── */
-    .score-grid {
+    /* ─── BIG SCORE ─── */
+    .score-trio {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
-      gap: 10px;
-      margin-top: 12px;
+      gap: 8px;
+      margin-top: 4px;
     }
 
-    .score-item {
-      text-align: center;
-      padding: 14px 8px;
-      background: rgba(255, 255, 255, 0.03);
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border);
-      transition: var(--transition);
-    }
-
-    .score-item:hover {
-      background: rgba(255, 255, 255, 0.06);
-    }
-
-    .score-value {
-      font-size: 28px;
-      font-weight: 800;
-      line-height: 1;
-      margin-bottom: 4px;
-    }
-
-    .score-value.scored {
-      color: var(--success);
-    }
-
-    .score-value.total {
-      color: var(--accent);
-    }
-
-    .score-value.accuracy {
-      color: var(--info);
-    }
-
-    .score-label {
-      font-size: 11px;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    /* ─── 最近一投 ─── */
-    .last-shot-content {
-      margin-top: 8px;
-    }
-
-    .last-shot-result {
+    .score-cell {
       display: flex;
+      flex-direction: column;
       align-items: center;
-      gap: 8px;
-      padding: 10px 14px;
-      border-radius: var(--radius-sm);
-      margin-bottom: 10px;
-      font-size: 15px;
+      padding: 12px 6px;
+      background: var(--surface);
+      border: 1px solid var(--rim);
+      border-radius: var(--radius);
+      transition: all 0.2s;
+    }
+
+    .score-cell:hover {
+      border-color: var(--rim-hi);
+      background: var(--panel-hi);
+    }
+
+    .score-num {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 34px;
       font-weight: 700;
+      line-height: 1;
     }
 
-    .last-shot-result.scored {
-      background: rgba(0, 230, 118, 0.1);
-      border: 1px solid rgba(0, 230, 118, 0.3);
-      color: var(--success);
+    .score-num.s-made {
+      color: var(--acid);
+      text-shadow: 0 0 12px rgba(57, 255, 20, 0.4);
     }
 
-    .last-shot-result.missed {
-      background: rgba(255, 82, 82, 0.1);
-      border: 1px solid rgba(255, 82, 82, 0.3);
-      color: var(--danger);
+    .score-num.s-total {
+      color: var(--plasma);
+      text-shadow: 0 0 12px rgba(255, 107, 0, 0.4);
     }
 
-    .shot-detail-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
+    .score-num.s-acc {
+      color: var(--neon);
+      text-shadow: 0 0 12px rgba(0, 229, 255, 0.4);
     }
 
-    .shot-detail-item {
-      padding: 8px 12px;
-      background: rgba(255, 255, 255, 0.02);
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border);
+    .score-lbl {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 9px;
+      color: var(--txt-ghost);
+      letter-spacing: 1.5px;
+      margin-top: 4px;
+      text-transform: uppercase;
     }
 
-    .shot-detail-value {
-      font-size: 16px;
-      font-weight: 700;
-      color: var(--text-primary);
-    }
-
-    .shot-detail-label {
-      font-size: 11px;
-      color: var(--text-muted);
-      margin-top: 2px;
-    }
-
-    /* ─── 投篮历史 ─── */
-    .history-list {
-      max-height: 200px;
-      overflow-y: auto;
-      scrollbar-width: thin;
-      scrollbar-color: var(--border) transparent;
-    }
-
-    .history-list::-webkit-scrollbar {
-      width: 5px;
-    }
-
-    .history-list::-webkit-scrollbar-thumb {
-      background: var(--border);
-      border-radius: 3px;
-    }
-
-    .history-item {
+    /* ─── PHASE INDICATOR ─── */
+    .phase-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 7px 10px;
-      border-radius: 6px;
-      margin-bottom: 4px;
-      font-size: 12px;
-      transition: var(--transition);
+      margin-top: 10px;
     }
 
-    .history-item:hover {
-      background: rgba(255, 255, 255, 0.04);
-    }
-
-    .history-item .num {
-      color: var(--text-muted);
-      font-weight: 600;
-      width: 28px;
-    }
-
-    .history-item .result-badge {
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-weight: 700;
+    .phase-lbl {
       font-size: 11px;
-    }
-
-    .result-badge.scored {
-      background: rgba(0, 230, 118, 0.15);
-      color: var(--success);
-    }
-
-    .result-badge.missed {
-      background: rgba(255, 82, 82, 0.15);
-      color: var(--danger);
-    }
-
-    .history-item .time {
-      color: var(--text-muted);
-    }
-
-    .history-item .arc {
-      color: var(--text-secondary);
-    }
-
-    .empty-msg {
-      text-align: center;
-      padding: 20px;
-      color: var(--text-muted);
-      font-size: 13px;
-    }
-
-    /* ─── 系统信息 ─── */
-    .sys-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 8px;
-    }
-
-    .sys-item {
-      text-align: center;
-      padding: 10px 6px;
-      background: rgba(255, 255, 255, 0.02);
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border);
-    }
-
-    .sys-value {
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--text-primary);
-      line-height: 1;
-      margin-bottom: 3px;
-    }
-
-    .sys-label {
-      font-size: 10px;
-      color: var(--text-muted);
+      color: var(--txt-ghost);
+      letter-spacing: 1px;
       text-transform: uppercase;
     }
 
-    /* ═══════════════ 动画 ═══════════════ */
-    @keyframes fadeIn {
+    .phase-chip {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      padding: 4px 12px;
+      border-radius: 3px;
+      text-transform: uppercase;
+      border: 1px solid transparent;
+    }
+
+    /* ─── LAST SHOT ─── */
+    .shot-result-banner {
+      padding: 11px 14px;
+      border-radius: var(--radius);
+      margin-bottom: 10px;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid transparent;
+    }
+
+    .shot-result-banner.made {
+      background: rgba(57, 255, 20, 0.07);
+      border-color: rgba(57, 255, 20, 0.3);
+      color: var(--acid);
+    }
+
+    .shot-result-banner.missed {
+      background: rgba(255, 45, 85, 0.07);
+      border-color: rgba(255, 45, 85, 0.3);
+      color: var(--crimson);
+    }
+
+    .shot-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .shot-cell {
+      background: var(--surface);
+      border: 1px solid var(--rim);
+      border-radius: var(--radius);
+      padding: 8px 10px;
+    }
+
+    .shot-val {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 14px;
+      color: var(--txt);
+    }
+
+    .shot-key {
+      font-size: 10px;
+      color: var(--txt-ghost);
+      letter-spacing: 1px;
+      margin-top: 3px;
+      text-transform: uppercase;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 24px 0;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 12px;
+      color: var(--txt-ghost);
+      letter-spacing: 1px;
+    }
+
+    .empty-state::before {
+      content: '[ ';
+    }
+
+    .empty-state::after {
+      content: ' ]';
+    }
+
+    /* ─── HISTORY ─── */
+    .hist-list {
+      max-height: 180px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--rim) transparent;
+    }
+
+    .hist-list::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .hist-list::-webkit-scrollbar-thumb {
+      background: var(--rim);
+      border-radius: 2px;
+    }
+
+    .hist-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: var(--radius);
+      font-size: 12px;
+      transition: background 0.15s;
+      border-bottom: 1px solid rgba(26, 47, 68, 0.5);
+    }
+
+    .hist-row:last-child {
+      border-bottom: none;
+    }
+
+    .hist-row:hover {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .hist-num {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      color: var(--txt-ghost);
+      width: 26px;
+    }
+
+    .hist-chip {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      padding: 2px 7px;
+      border-radius: 3px;
+      text-transform: uppercase;
+    }
+
+    .hist-chip.made {
+      background: rgba(57, 255, 20, 0.12);
+      color: var(--acid);
+      border: 1px solid rgba(57, 255, 20, 0.25);
+    }
+
+    .hist-chip.missed {
+      background: rgba(255, 45, 85, 0.12);
+      color: var(--crimson);
+      border: 1px solid rgba(255, 45, 85, 0.25);
+    }
+
+    .hist-arc {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      color: var(--txt-dim);
+      flex: 1;
+      text-align: right;
+    }
+
+    /* ─── SYS STATS ─── */
+    .sys-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+
+    .sys-cell {
+      background: var(--surface);
+      border: 1px solid var(--rim);
+      border-radius: var(--radius);
+      padding: 8px;
+      text-align: center;
+    }
+
+    .sys-val {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 16px;
+      color: var(--neon);
+    }
+
+    .sys-lbl {
+      font-size: 9px;
+      color: var(--txt-ghost);
+      letter-spacing: 1px;
+      margin-top: 3px;
+      text-transform: uppercase;
+    }
+
+    /* ─── mini arc chart ─── */
+    .arc-chart-wrap {
+      position: relative;
+      height: 60px;
+      overflow: hidden;
+    }
+
+    .arc-canvas {
+      width: 100%;
+      height: 60px;
+    }
+
+    /* ─── CANVAS OVERLAY ─── */
+    .video-wrap {
+      position: relative;
+    }
+
+    .traj-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    }
+
+    /* release-point pulse ring */
+    @keyframes releaseRing {
+      0% {
+        transform: translate(-50%, -50%) scale(0.6);
+        opacity: 1;
+      }
+
+      100% {
+        transform: translate(-50%, -50%) scale(2.2);
+        opacity: 0;
+      }
+    }
+
+    .release-ring {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      border: 2px solid #39ff14;
+      border-radius: 50%;
+      pointer-events: none;
+      animation: releaseRing 1s ease-out infinite;
+    }
+
+    /* ─── NEON CORNER DECO ─── */
+    .corner-tl,
+    .corner-br {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      pointer-events: none;
+    }
+
+    .corner-tl {
+      top: 0;
+      left: 0;
+      border-top: 2px solid var(--neon);
+      border-left: 2px solid var(--neon);
+    }
+
+    .corner-br {
+      bottom: 0;
+      right: 0;
+      border-bottom: 2px solid var(--neon);
+      border-right: 2px solid var(--neon);
+    }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .sidebar {
+        grid-template-columns: 1fr;
+      }
+
+      .video-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ─── ANIMATE IN ─── */
+    .panel {
+      animation: fadeUp 0.4s var(--ease) both;
+    }
+
+    .panel:nth-child(1) {
+      animation-delay: 0.05s;
+    }
+
+    .panel:nth-child(2) {
+      animation-delay: 0.1s;
+    }
+
+    .panel:nth-child(3) {
+      animation-delay: 0.15s;
+    }
+
+    .panel:nth-child(4) {
+      animation-delay: 0.2s;
+    }
+
+    .panel:nth-child(5) {
+      animation-delay: 0.25s;
+    }
+
+    @keyframes fadeUp {
       from {
         opacity: 0;
-        transform: translateY(8px);
+        transform: translateY(10px);
       }
 
       to {
@@ -672,302 +989,460 @@
       }
     }
 
-    .card {
-      animation: fadeIn 0.4s ease-out;
-    }
-
-    /* ═══════════════ 响应式 ═══════════════ */
-    @media (max-width: 1100px) {
-      .main {
-        grid-template-columns: 1fr;
+    /* ─── GLOW PULSE ON RESULT ─── */
+    @keyframes glowPulse {
+      0% {
+        box-shadow: 0 0 0px transparent;
       }
 
-      .sidebar {
-        order: -1;
+      50% {
+        box-shadow: 0 0 20px var(--acid);
       }
 
-      .video-secondary {
-        grid-template-columns: 1fr 1fr;
+      100% {
+        box-shadow: 0 0 0px transparent;
       }
     }
 
-    @media (max-width: 600px) {
-      .topbar {
-        padding: 0 12px;
-      }
+    .glow-made {
+      animation: glowPulse 1s ease;
+    }
 
-      .main {
-        padding: 10px;
-      }
+    /* horizontal rule */
+    .h-rule {
+      height: 1px;
+      background: var(--rim);
+      margin: 10px 0;
+    }
 
-      .controls-bar {
-        gap: 6px;
-      }
-
-      .btn {
-        padding: 6px 12px;
-        font-size: 12px;
-      }
-
-      .score-value {
-        font-size: 22px;
-      }
+    /* scroll bar */
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: var(--rim) transparent;
     }
   </style>
 </head>
 
 <body>
 
-  <!-- ═══ 预处理遮罩 ═══ -->
-  <div id="preprocess-overlay">
-    <div class="preprocess-box">
-      <div class="spinner"></div>
-      <h2>🏀 视频预处理中</h2>
-      <p>正在逐帧检测目标并构建轨迹，请稍候...</p>
-      <div id="preprocess-msg">初始化中...</div>
-      <div class="progress-bar-outer">
-        <div class="progress-bar-inner" id="preprocess-bar"></div>
-      </div>
+  <!-- PREPROCESS OVERLAY -->
+  <div id="overlay">
+    <div class="ov-ring">
+      <svg width="100" height="100" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(0,229,255,0.15)" stroke-width="3" />
+        <circle cx="50" cy="50" r="42" fill="none" stroke="var(--neon)" stroke-width="3" stroke-dasharray="60 204"
+          stroke-linecap="round" transform="rotate(-90 50 50)" />
+      </svg>
+      <div class="ov-ring-inner"></div>
+    </div>
+    <div class="ov-label">PREPROCESSING</div>
+    <div class="ov-msg" id="ov-msg">初始化分析引擎...</div>
+    <div class="ov-bar-outer">
+      <div class="ov-bar-inner" id="ov-bar"></div>
     </div>
   </div>
 
-  <!-- ═══ 顶部栏 ═══ -->
-  <div class="topbar">
-    <div class="topbar-left">
-      <span class="topbar-logo">🏀</span>
-      <div>
-        <div class="topbar-title">AI 篮球投篮分析系统</div>
-        <div class="topbar-subtitle">实时双目视觉 · 深度学习目标检测 · 投篮轨迹分析</div>
-      </div>
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div style="display:flex;align-items:center;">
+      <span class="logo-mark">HOOP.AI</span>
+      <div class="logo-sep"></div>
+      <span class="logo-sub">篮球智能分析系统</span>
     </div>
+
+    <div class="topbar-center">
+      <span class="frame-ticker" id="frame-ticker">帧 0 / 0</span>
+    </div>
+
     <div class="topbar-right">
-      <div class="status-indicator">
-        <span class="dot" id="status-dot"></span>
-        <span id="status-text">就绪</span>
-      </div>
-      <div class="device-badge">
-        <span class="device-dot"></span>
-        <span id="device-name">检测中...</span>
+      <span class="device-chip" id="device-chip">CPU</span>
+      <div class="status-pill" id="status-pill">
+        <div class="status-pip" id="status-pip"></div>
+        <span id="status-txt">就绪</span>
       </div>
     </div>
-  </div>
+  </header>
 
-  <!-- ═══ 主内容 ═══ -->
-  <div class="main">
+  <!-- MAIN LAYOUT -->
+  <div class="layout">
 
-    <!-- ─── 左侧: 视频+控制 ─── -->
-    <div class="video-section">
-
-      <!-- 控制栏 -->
-      <div class="controls-bar">
-        <button class="btn btn-primary" id="btn-start" onclick="startDetection()">
-          ▶ 开始分析
-        </button>
-        <button class="btn btn-secondary" id="btn-pause" onclick="togglePause()" disabled>
-          ⏸ 暂停
-        </button>
-        <button class="btn btn-danger" id="btn-stop" onclick="stopDetection()" disabled>
-          ⏹ 停止
-        </button>
-        <div class="controls-sep"></div>
-        <button class="btn btn-upload" onclick="document.getElementById('file-input').click()">
-          📁 选择视频
-        </button>
-        <input type="file" id="file-input" accept=".avi,.mp4,.mov,.mkv,.flv,.wmv" style="display:none"
-          onchange="uploadVideo(this)">
-        <span class="file-label" id="file-label">ball.avi</span>
-      </div>
-
-      <!-- 主视频(左相机+轨迹) -->
-      <div class="card video-main">
-        <div class="card-header">
-          <span class="card-header-title">
-            <span class="icon">📹</span> 左相机 · 轨迹追踪
-          </span>
-          <span class="card-header-title" style="color:var(--accent);" id="frame-info">
-            帧: 0/0
-          </span>
-        </div>
-        <div class="card-body">
-          <img id="video-left" src="" alt="左相机画面">
-        </div>
-      </div>
-
-      <!-- 副视频(右相机+深度图) -->
-      <div class="video-secondary">
-        <div class="card">
-          <div class="card-header">
-            <span class="card-header-title">
-              <span class="icon">📷</span> 右相机
-            </span>
-          </div>
-          <div class="card-body" style="padding:0">
-            <img id="video-right" src="" alt="右相机画面">
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-header">
-            <span class="card-header-title">
-              <span class="icon">🌈</span> 深度图
-            </span>
-          </div>
-          <div class="card-body" style="padding:0">
-            <img id="video-depth" src="" alt="深度图">
-          </div>
-        </div>
-      </div>
+    <!-- CONTROL BAR -->
+    <div class="ctrl-bar">
+      <button class="btn btn-go" id="btn-start" onclick="startDet()">▶ 启动</button>
+      <button class="btn btn-pause" id="btn-pause" onclick="togglePause()" disabled>⏸ 暂停</button>
+      <button class="btn btn-stop" id="btn-stop" onclick="stopDet()" disabled>■ 停止</button>
+      <div class="ctrl-sep"></div>
+      <input type="file" accept=".avi,.mp4,.mov,.mkv" id="file-input" style="display:none" onchange="uploadVideo(this)">
+      <label for="file-input" class="btn btn-upload">↑ 上传视频</label>
+      <span class="file-name" id="file-name">ball.avi</span>
     </div>
 
-    <!-- ─── 右侧: 数据面板 ─── -->
+    <!-- VIDEO COLUMN -->
+    <div class="video-col">
+
+      <!-- Main feed -->
+      <div class="panel video-main-panel" style="position:relative;">
+        <div class="corner-tl"></div>
+        <div class="corner-br"></div>
+        <div class="panel-head">
+          <div class="panel-head-left">
+            <div class="panel-dot"></div>
+            <span class="panel-tag">LEFT CAMERA — LIVE</span>
+          </div>
+          <span class="panel-badge"
+            style="color:var(--neon);border:1px solid rgba(0,229,255,0.25);background:rgba(0,229,255,0.06);"
+            id="fps-badge">0 FPS</span>
+        </div>
+        <div class="video-wrap" id="video-wrap">
+          <img id="video-left" src="" alt="Left camera feed">
+          <canvas id="traj-canvas" class="traj-canvas"></canvas>
+          <div class="video-hud">
+            <span class="hud-badge" id="hud-frame">F:0</span>
+            <span class="hud-phase ph-idle" id="hud-phase">IDLE</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sub feeds -->
+      <div class="video-row">
+        <div class="panel video-sub-panel">
+          <div class="panel-head">
+            <div class="panel-head-left">
+              <div class="panel-dot" style="background:var(--plasma);box-shadow:0 0 6px var(--plasma);"></div>
+              <span class="panel-tag">RIGHT CAMERA</span>
+            </div>
+          </div>
+          <img id="video-right" src="" alt="Right feed">
+        </div>
+        <div class="panel video-sub-panel">
+          <div class="panel-head">
+            <div class="panel-head-left">
+              <div class="panel-dot" style="background:var(--gold);box-shadow:0 0 6px var(--gold);"></div>
+              <span class="panel-tag">DEPTH MAP</span>
+            </div>
+          </div>
+          <img id="video-depth" src="" alt="Depth feed">
+        </div>
+      </div>
+
+    </div><!-- /video-col -->
+
+    <!-- SIDEBAR -->
     <div class="sidebar">
 
-      <!-- 投篮检测状态 -->
-      <div class="card shot-detection-card">
-        <div class="card-header">
-          <span class="card-header-title">
-            <span class="icon">🎯</span> 投篮检测
-          </span>
-          <span class="phase-badge phase-idle" id="phase-badge">等待中</span>
+      <!-- SHOT STATS -->
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-head-left">
+            <div class="panel-dot" style="background:var(--acid);box-shadow:0 0 6px var(--acid);"></div>
+            <span class="panel-tag">SHOT STATS</span>
+          </div>
         </div>
-        <div class="card-body">
-          <div class="score-grid">
-            <div class="score-item">
-              <div class="score-value scored" id="scored-count">0</div>
-              <div class="score-label">命中</div>
+        <div class="panel-body">
+          <div class="score-trio">
+            <div class="score-cell">
+              <span class="score-num s-made" id="s-made">0</span>
+              <span class="score-lbl">命中</span>
             </div>
-            <div class="score-item">
-              <div class="score-value total" id="total-shots">0</div>
-              <div class="score-label">出手</div>
+            <div class="score-cell">
+              <span class="score-num s-total" id="s-total">0</span>
+              <span class="score-lbl">总计</span>
             </div>
-            <div class="score-item">
-              <div class="score-value accuracy" id="accuracy">0%</div>
-              <div class="score-label">命中率</div>
+            <div class="score-cell">
+              <span class="score-num s-acc" id="s-acc">0%</span>
+              <span class="score-lbl">命中率</span>
             </div>
+          </div>
+          <div class="phase-row">
+            <span class="phase-lbl">检测阶段</span>
+            <span class="phase-chip ph-idle" id="phase-chip">IDLE</span>
           </div>
         </div>
       </div>
 
-      <!-- 最近一投 -->
-      <div class="card">
-        <div class="card-header">
-          <span class="card-header-title">
-            <span class="icon">📊</span> 最近一投
-          </span>
+      <!-- LAST SHOT -->
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-head-left">
+            <div class="panel-dot" style="background:var(--plasma);box-shadow:0 0 6px var(--plasma);"></div>
+            <span class="panel-tag">LAST SHOT</span>
+          </div>
         </div>
-        <div class="card-body">
-          <div class="last-shot-content" id="last-shot-content">
-            <div class="empty-msg">等待投篮中...</div>
+        <div class="panel-body">
+          <div id="last-shot-body">
+            <div class="empty-state">等待第一次投篮</div>
           </div>
         </div>
       </div>
 
-      <!-- 投篮历史 -->
-      <div class="card">
-        <div class="card-header">
-          <span class="card-header-title">
-            <span class="icon">📜</span> 投篮历史
-          </span>
-          <span style="font-size:12px;color:var(--text-muted)" id="history-count">0 次</span>
+      <!-- HISTORY -->
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-head-left">
+            <div class="panel-dot" style="background:var(--gold);box-shadow:0 0 6px var(--gold);"></div>
+            <span class="panel-tag">SHOT LOG</span>
+          </div>
+          <span class="panel-badge" id="hist-count"
+            style="color:var(--txt-dim);border:1px solid var(--rim);background:transparent;">0 次</span>
         </div>
-        <div class="card-body" style="padding:8px 12px">
-          <div class="history-list" id="history-list">
-            <div class="empty-msg">暂无投篮记录</div>
+        <div class="panel-body" style="padding:8px 10px;">
+          <div class="hist-list" id="hist-list">
+            <div class="empty-state">暂无记录</div>
           </div>
         </div>
       </div>
 
-      <!-- 系统状态 -->
-      <div class="card">
-        <div class="card-header">
-          <span class="card-header-title">
-            <span class="icon">⚙️</span> 系统状态
-          </span>
+      <!-- SYSTEM -->
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-head-left">
+            <div class="panel-dot" style="background:var(--txt-dim);box-shadow:none;"></div>
+            <span class="panel-tag">SYSTEM</span>
+          </div>
         </div>
-        <div class="card-body">
+        <div class="panel-body">
           <div class="sys-grid">
-            <div class="sys-item">
-              <div class="sys-value" id="sys-fps">0</div>
-              <div class="sys-label">FPS</div>
+            <div class="sys-cell">
+              <div class="sys-val" id="sys-fps">0</div>
+              <div class="sys-lbl">FPS</div>
             </div>
-            <div class="sys-item">
-              <div class="sys-value" id="sys-latency">0</div>
-              <div class="sys-label">延迟 (ms)</div>
+            <div class="sys-cell">
+              <div class="sys-val" id="sys-lat">0</div>
+              <div class="sys-lbl">延迟ms</div>
             </div>
-            <div class="sys-item">
-              <div class="sys-value" id="sys-gpu">-</div>
-              <div class="sys-label">GPU (GB)</div>
+            <div class="sys-cell">
+              <div class="sys-val" id="sys-gpu">—</div>
+              <div class="sys-lbl">GPU MB</div>
             </div>
-            <div class="sys-item">
-              <div class="sys-value" id="sys-ball">0</div>
-              <div class="sys-label">篮球</div>
+            <div class="sys-cell">
+              <div class="sys-val" id="sys-ball">0</div>
+              <div class="sys-lbl">篮球</div>
             </div>
-            <div class="sys-item">
-              <div class="sys-value" id="sys-hoop">0</div>
-              <div class="sys-label">篮筐</div>
+            <div class="sys-cell">
+              <div class="sys-val" id="sys-hoop">0</div>
+              <div class="sys-lbl">篮筐</div>
             </div>
-            <div class="sys-item">
-              <div class="sys-value" id="sys-frame">0</div>
-              <div class="sys-label">当前帧</div>
+            <div class="sys-cell">
+              <div class="sys-val" id="sys-fr">0</div>
+              <div class="sys-lbl">当前帧</div>
             </div>
           </div>
         </div>
       </div>
 
-    </div>
-  </div>
+    </div><!-- /sidebar -->
+
+  </div><!-- /layout -->
 
   <script>
-    /* ═══════════════ 前端逻辑 ═══════════════ */
+    /* ═══════════════════════════════════════════
+       HOOP.AI — Frontend Controller  v2
+    ═══════════════════════════════════════════ */
     const API = '';
     let pollTimer = null;
     let isRunning = false;
     let isPaused = false;
 
-    // ─── 视频流 ───
-    function startStreams() {
-      const ts = Date.now();
-      document.getElementById('video-left').src = `${API}/api/video_feed/left?t=${ts}`;
-      document.getElementById('video-right').src = `${API}/api/video_feed/right?t=${ts}`;
-      document.getElementById('video-depth').src = `${API}/api/video_feed/depth?t=${ts}`;
-    }
-    function stopStreams() {
-      document.getElementById('video-left').src = '';
-      document.getElementById('video-right').src = '';
-      document.getElementById('video-depth').src = '';
+    /* ─── Shot history: maintained entirely in the frontend ─── */
+    let shotHistory = [];     // [{scored, arc_height, duration}, ...]
+    let lastShotKey = null;   // fingerprint to detect new shot events
+
+    /* ─── Trajectory cache: keep visible through COOLDOWN ─── */
+    let cachedTraj = [];   // [[x,y], ...]
+    let cachedRelease = null; // [x,y]
+    let cachedScoredResult = null; // true / false / null
+    let prevPhase = 'idle';
+
+    /* ─── Canvas ─── */
+    const canvas = document.getElementById('traj-canvas');
+    const ctx = canvas ? canvas.getContext('2d') : null;
+
+    // Sync canvas pixel size to its display size
+    function syncCanvas() {
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      if (canvas.width !== rect.width || canvas.height !== rect.height) {
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+      }
     }
 
-    // ─── 控制 ───
-    async function startDetection() {
-      try {
-        const res = await fetch(`${API}/api/start`, { method: 'POST' });
-        const data = await res.json();
-        if (data.success) {
-          isRunning = true; isPaused = false;
-          updateButtons();
-          startStreams();
-          startPolling();
+    // Backend video is 640×480; canvas display may differ — compute scale
+    function getScale() {
+      if (!canvas) return { sx: 1, sy: 1 };
+      return {
+        sx: canvas.width / 640,
+        sy: canvas.height / 480,
+      };
+    }
+
+    /* Draw the trajectory arc + release marker on canvas */
+    function drawTrajectory(traj, releasePoint, scored) {
+      if (!ctx || !canvas) return;
+      syncCanvas();
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (!traj || traj.length < 2) return;
+
+      const { sx, sy } = getScale();
+      const pts = traj.map(([x, y]) => [x * sx, y * sy]);
+      const n = pts.length;
+
+      // ── glow shadow passes (3 layers, widest first) ──
+      const glowLayers = [
+        { blur: 18, width: 7, alpha: 0.18 },
+        { blur: 10, width: 4, alpha: 0.35 },
+        { blur: 4, width: 2, alpha: 0.60 },
+      ];
+
+      // colour stops along the arc:
+      // start (release) → cyan, mid (apex) → gold, end → scored=green / missed=red
+      const endColor = scored === true ? '#39ff14'
+        : scored === false ? '#ff2d55'
+          : '#00e5ff';
+
+      for (const layer of glowLayers) {
+        ctx.save();
+        ctx.shadowBlur = layer.blur;
+        ctx.shadowColor = '#00e5ff';
+        ctx.lineWidth = layer.width;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.globalAlpha = layer.alpha;
+
+        // Build gradient along bounding box
+        const xs = pts.map(p => p[0]);
+        const ys = pts.map(p => p[1]);
+        const x0 = Math.min(...xs), x1 = Math.max(...xs);
+        const y0 = Math.min(...ys), y1 = Math.max(...ys);
+        const grad = ctx.createLinearGradient(pts[0][0], pts[0][1], pts[n - 1][0], pts[n - 1][1]);
+        grad.addColorStop(0, '#00e5ff');
+        grad.addColorStop(0.45, '#ffd700');
+        grad.addColorStop(1, endColor);
+        ctx.strokeStyle = grad;
+
+        ctx.beginPath();
+        ctx.moveTo(pts[0][0], pts[0][1]);
+        for (let i = 1; i < n; i++) {
+          if (i < n - 1) {
+            // smooth with midpoints
+            const mx = (pts[i][0] + pts[i + 1][0]) / 2;
+            const my = (pts[i][1] + pts[i + 1][1]) / 2;
+            ctx.quadraticCurveTo(pts[i][0], pts[i][1], mx, my);
+          } else {
+            ctx.lineTo(pts[i][0], pts[i][1]);
+          }
         }
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // ── dot at end point ──
+      const ep = pts[n - 1];
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(ep[0], ep[1], 5, 0, Math.PI * 2);
+      ctx.fillStyle = endColor;
+      ctx.shadowColor = endColor;
+      ctx.shadowBlur = 12;
+      ctx.fill();
+      ctx.restore();
+
+      // ── release point marker ──
+      if (releasePoint) {
+        const rx = releasePoint[0] * sx;
+        const ry = releasePoint[1] * sy;
+
+        // outer pulse ring
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(rx, ry, 10, 0, Math.PI * 2);
+        ctx.strokeStyle = '#39ff14';
+        ctx.lineWidth = 1.5;
+        ctx.globalAlpha = 0.7;
+        ctx.shadowColor = '#39ff14';
+        ctx.shadowBlur = 10;
+        ctx.stroke();
+        ctx.restore();
+
+        // cross-hair
+        ctx.save();
+        ctx.strokeStyle = '#39ff14';
+        ctx.lineWidth = 1;
+        ctx.globalAlpha = 0.9;
+        ctx.shadowColor = '#39ff14';
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.moveTo(rx - 7, ry); ctx.lineTo(rx + 7, ry);
+        ctx.moveTo(rx, ry - 7); ctx.lineTo(rx, ry + 7);
+        ctx.stroke();
+        ctx.restore();
+
+        // label
+        ctx.save();
+        ctx.font = 'bold 16px "Share Tech Mono", monospace';
+        ctx.fillStyle = '#ff6b00';
+        ctx.globalAlpha = 1.0;
+        ctx.shadowColor = '#ff6b00';
+        ctx.shadowBlur = 10;
+        ctx.fillText('RELEASE', rx + 12, ry - 4);
+        ctx.restore();
+      }
+    }
+
+    function clearCanvas() {
+      if (!ctx || !canvas) return;
+      syncCanvas();
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    const phaseMap = {
+      idle: { text: 'IDLE', cls: 'ph-idle', chipCss: 'color:var(--txt-ghost);border-color:var(--rim);' },
+      rising: { text: 'RISING ↑', cls: 'ph-rising', chipCss: 'color:var(--gold);border-color:rgba(255,215,0,0.4);background:rgba(255,215,0,0.06);' },
+      tracking: { text: 'TRACKING ●', cls: 'ph-tracking', chipCss: 'color:var(--plasma);border-color:rgba(255,107,0,0.5);background:rgba(255,107,0,0.06);' },
+      cooldown: { text: 'COOLDOWN', cls: 'ph-cooldown', chipCss: 'color:var(--neon);border-color:rgba(0,229,255,0.4);background:rgba(0,229,255,0.06);' },
+      preprocessing: { text: 'PROC...', cls: 'ph-idle', chipCss: '' },
+      playback: { text: 'PLAYING', cls: 'ph-cooldown', chipCss: 'color:var(--neon);border-color:rgba(0,229,255,0.4);background:rgba(0,229,255,0.06);' },
+    };
+
+    /* ─── STREAMS ─── */
+    function startStreams() {
+      const t = Date.now();
+      document.getElementById('video-left').src = `${API}/api/video_feed?t=${t}`;
+      document.getElementById('video-right').src = `${API}/api/video_feed/right?t=${t}`;
+      document.getElementById('video-depth').src = `${API}/api/video_feed/depth?t=${t}`;
+    }
+    function stopStreams() {
+      ['video-left', 'video-right', 'video-depth'].forEach(id => document.getElementById(id).src = '');
+    }
+
+    /* ─── CONTROLS ─── */
+    async function startDet() {
+      try {
+        await fetch(`${API}/api/start`, { method: 'POST' });
+        isRunning = true; isPaused = false;
+        updateUI(); startStreams(); startPoll();
       } catch (e) { console.error(e); }
     }
 
     async function togglePause() {
       try {
-        const res = await fetch(`${API}/api/pause`, { method: 'POST' });
-        const data = await res.json();
-        if (data.success) {
-          isPaused = data.paused;
-          updateButtons();
-        }
+        const r = await fetch(`${API}/api/pause`, { method: 'POST' });
+        const d = await r.json();
+        isPaused = d.status === 'paused';
+        updateUI();
       } catch (e) { console.error(e); }
     }
 
-    async function stopDetection() {
+    async function stopDet() {
       try {
         await fetch(`${API}/api/stop`, { method: 'POST' });
         isRunning = false; isPaused = false;
-        updateButtons();
-        stopPolling();
-        stopStreams();
+        updateUI(); stopPoll(); stopStreams(); clearCanvas();
+        // reset caches
+        cachedTraj = []; cachedRelease = null; cachedScoredResult = null;
+        shotHistory = []; lastShotKey = null;
+        renderHistory([]); renderLastShot(null);
       } catch (e) { console.error(e); }
     }
 
@@ -975,186 +1450,226 @@
       if (!input.files.length) return;
       const file = input.files[0];
       const fd = new FormData();
-      fd.append('video', file);
+      fd.append('file', file);
       try {
-        const res = await fetch(`${API}/api/upload`, { method: 'POST', body: fd });
-        const data = await res.json();
-        if (data.success) {
-          document.getElementById('file-label').textContent = data.filename;
-        } else {
-          alert(data.message || '上传失败');
-        }
-      } catch (e) { alert('上传出错'); }
+        const r = await fetch(`${API}/api/upload_video`, { method: 'POST', body: fd });
+        const d = await r.json();
+        if (d.filename) document.getElementById('file-name').textContent = d.filename;
+      } catch (e) { alert('上传失败'); }
       input.value = '';
     }
 
-    function updateButtons() {
-      const start = document.getElementById('btn-start');
-      const pause = document.getElementById('btn-pause');
-      const stop = document.getElementById('btn-stop');
-      start.disabled = isRunning;
-      pause.disabled = !isRunning;
-      stop.disabled = !isRunning;
-      pause.innerHTML = isPaused ? '▶ 继续' : '⏸ 暂停';
+    /* ─── UI UPDATE ─── */
+    function updateUI() {
+      const bStart = document.getElementById('btn-start');
+      const bPause = document.getElementById('btn-pause');
+      const bStop = document.getElementById('btn-stop');
+      bStart.disabled = isRunning;
+      bPause.disabled = !isRunning;
+      bStop.disabled = !isRunning;
+      bPause.innerHTML = isPaused ? '▶ 继续' : '⏸ 暂停';
 
-      const dot = document.getElementById('status-dot');
-      const txt = document.getElementById('status-text');
-      dot.className = 'dot' + (isRunning ? (isPaused ? ' paused' : ' running') : '');
+      const pill = document.getElementById('status-pill');
+      const txt = document.getElementById('status-txt');
+      pill.className = 'status-pill' + (isRunning ? (isPaused ? ' paused' : ' running') : '');
       txt.textContent = isRunning ? (isPaused ? '已暂停' : '运行中') : '就绪';
     }
 
-    // ─── 轮询 ───
-    function startPolling() { stopPolling(); pollTimer = setInterval(pollStatus, 400); }
-    function stopPolling() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
-
-    const phaseMap = {
-      idle: { text: '等待中', cls: 'phase-idle' },
-      rising: { text: '上升中...', cls: 'phase-rising' },
-      tracking: { text: '追踪中!', cls: 'phase-tracking' },
-      cooldown: { text: '冷却中', cls: 'phase-cooldown' },
-      preprocessing: { text: '预处理', cls: 'phase-idle' },
-    };
+    /* ─── POLLING ─── */
+    function startPoll() { stopPoll(); pollTimer = setInterval(pollStatus, 350); }
+    function stopPoll() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
 
     async function pollStatus() {
       try {
-        const res = await fetch(`${API}/api/status`);
-        const data = await res.json();
-        if (!data.success) return;
+        const r = await fetch(`${API}/api/status`);
+        const d = await r.json();
 
-        const s = data.stats;
-        const shot = data.shot_info;
+        isRunning = d.is_running;
+        isPaused = d.is_paused;
+        updateUI();
 
-        // 运行状态
-        isRunning = data.is_running;
-        isPaused = data.is_paused;
-        updateButtons();
+        if (!d.is_running && !d.is_preprocessing) { stopPoll(); return; }
 
-        if (!data.is_running && !data.is_preprocessing) {
-          stopPolling();
-          return;
-        }
+        const s = d.stats || {};
+        const shot = d.shot_info || {};
 
-        // 预处理遮罩
-        const overlay = document.getElementById('preprocess-overlay');
-        if (data.is_preprocessing) {
-          overlay.classList.add('active');
-          document.getElementById('preprocess-msg').textContent =
-            data.preprocess_progress || '处理中...';
-          const pct = s.total_frames > 0
-            ? (s.current_frame / s.total_frames * 100) : 0;
-          document.getElementById('preprocess-bar').style.width = pct + '%';
+        // ── preprocessing overlay ──
+        const ov = document.getElementById('overlay');
+        if (d.is_preprocessing) {
+          ov.classList.add('active');
+          document.getElementById('ov-msg').textContent = d.preprocess_progress || '处理中...';
+          const pct = s.total_frames > 0 ? (s.current_frame / s.total_frames * 100) : 0;
+          document.getElementById('ov-bar').style.width = pct + '%';
         } else {
-          overlay.classList.remove('active');
+          ov.classList.remove('active');
         }
 
-        // 设备名
-        document.getElementById('device-name').textContent = data.device || 'CPU';
+        // ── device / ticker / fps ──
+        document.getElementById('device-chip').textContent = d.device || 'CPU';
+        document.getElementById('frame-ticker').textContent = `帧 ${s.current_frame || 0} / ${s.total_frames || 0}`;
+        document.getElementById('fps-badge').textContent = (s.fps || 0) + ' FPS';
+        document.getElementById('hud-frame').textContent = 'F:' + (s.current_frame || 0);
 
-        // 帧信息
-        document.getElementById('frame-info').textContent =
-          `帧: ${s.current_frame}/${s.total_frames}`;
+        // ── phase ──
+        const phase = shot.phase || s.phase || 'idle';
+        const pm = phaseMap[phase] || phaseMap.idle;
+        const hudPhase = document.getElementById('hud-phase');
+        const chipPhase = document.getElementById('phase-chip');
+        hudPhase.textContent = pm.text;
+        hudPhase.className = 'hud-phase ' + pm.cls;
+        chipPhase.textContent = pm.text;
+        chipPhase.setAttribute('style', pm.chipCss);
 
-        // 投篮阶段徽章
-        const pi = phaseMap[shot.phase] || phaseMap.idle;
-        const badge = document.getElementById('phase-badge');
-        badge.textContent = pi.text;
-        badge.className = 'phase-badge ' + pi.cls;
+        // ── scores ──
+        document.getElementById('s-made').textContent = shot.total_scored || 0;
+        document.getElementById('s-total').textContent = shot.total_shots || 0;
+        document.getElementById('s-acc').textContent = shot.accuracy || '0%';
 
-        // 得分统计
-        document.getElementById('scored-count').textContent = shot.total_scored;
-        document.getElementById('total-shots').textContent = shot.total_shots;
-        document.getElementById('accuracy').textContent = shot.accuracy || '0%';
+        // ─────────────────────────────────────────────────────
+        // SHOT HISTORY — detect new shots via last_shot changes
+        // The backend never sends shot_history so we build it here.
+        // A new shot has arrived when last_shot changes (new arc_height/duration combo).
+        // ─────────────────────────────────────────────────────
+        const ls = shot.last_shot;
+        if (ls) {
+          const key = `${ls.scored}_${ls.arc_height}_${ls.duration}`;
+          if (key !== lastShotKey) {
+            lastShotKey = key;
+            shotHistory.push({
+              scored: ls.scored,
+              is_scored: ls.scored,
+              arc_height: ls.arc_height,
+              duration: ls.duration,
+            });
+          }
+        }
 
-        // 最近一投
-        updateLastShot(shot.last_shot);
+        renderLastShot(ls);
+        renderHistory(shotHistory);
+        document.getElementById('hist-count').textContent = shotHistory.length + ' 次';
 
-        // 历史列表
-        updateHistory(shot.shot_history);
-        document.getElementById('history-count').textContent =
-          `${(shot.shot_history || []).length} 次`;
+        // ─────────────────────────────────────────────────────
+        // TRAJECTORY CACHE
+        // Keep traj + release point alive through COOLDOWN.
+        // Only wipe when transitioning back to IDLE / RISING.
+        // ─────────────────────────────────────────────────────
+        const activeTraj = shot.shot_trajectory || [];
+        const activeRelease = shot.physics_release_point || null;
 
-        // 系统状态
+        if (phase === 'rising' || phase === 'tracking') {
+          // actively accumulating — update cache
+          if (activeTraj.length > 0) {
+            cachedTraj = activeTraj;
+            cachedRelease = activeRelease || cachedRelease;
+          }
+          cachedScoredResult = null; // result not yet known
+          drawTrajectory(cachedTraj, cachedRelease, null);
+
+        } else if (phase === 'cooldown') {
+          // shot done — grab result once from last_shot, keep drawing frozen arc
+          if (ls && cachedScoredResult === null) {
+            cachedScoredResult = ls.scored;
+            // prefer the complete frozen trajectory baked into last_shot
+            if (ls.final_trajectory && ls.final_trajectory.length > 0) {
+              cachedTraj = ls.final_trajectory;
+              cachedRelease = ls.final_release || cachedRelease;
+            }
+          }
+          // if we received a fresh completed trajectory right before cooldown, update
+          if (activeTraj.length > 0 && cachedScoredResult === null) cachedTraj = activeTraj;
+          if (activeRelease && !cachedRelease) cachedRelease = activeRelease;
+          drawTrajectory(cachedTraj, cachedRelease, cachedScoredResult);
+
+        } else {
+          // idle / preprocessing / playback — clear everything
+          if (prevPhase === 'cooldown') {
+            cachedTraj = []; cachedRelease = null; cachedScoredResult = null;
+          }
+          clearCanvas();
+        }
+
+        prevPhase = phase;
+
+        // ── sys stats ──
         document.getElementById('sys-fps').textContent = s.fps || 0;
-        document.getElementById('sys-latency').textContent = s.process_time || 0;
-        document.getElementById('sys-gpu').textContent =
-          s.gpu_memory > 0 ? s.gpu_memory : '-';
+        document.getElementById('sys-lat').textContent = s.process_time || 0;
+        document.getElementById('sys-gpu').textContent = s.gpu_memory > 0 ? s.gpu_memory : '—';
         document.getElementById('sys-ball').textContent = s.basketball_count || 0;
         document.getElementById('sys-hoop').textContent = s.hoops_count || 0;
-        document.getElementById('sys-frame').textContent = s.current_frame || 0;
+        document.getElementById('sys-fr').textContent = s.current_frame || 0;
 
-      } catch (e) { /* 忽略网络错误 */ }
+      } catch (e) { /* ignore network errors */ }
     }
 
-    function updateLastShot(shot) {
-      const el = document.getElementById('last-shot-content');
+    /* ─── Render helpers ─── */
+    function renderLastShot(shot) {
+      const el = document.getElementById('last-shot-body');
       if (!shot) {
-        el.innerHTML = '<div class="empty-msg">等待投篮中...</div>';
+        el.innerHTML = '<div class="empty-state">等待第一次投篮</div>';
         return;
       }
-      const isScored = shot.is_scored;
+      const made = shot.scored || shot.is_scored;
+      const cls = made ? 'made' : 'missed';
+      const lbl = made ? 'SCORED !' : 'MISSED';
+      const icon = made ? '◉' : '○';
+
       el.innerHTML = `
-        <div class="last-shot-result ${isScored ? 'scored' : 'missed'}">
-            ${isScored ? '✅ 命中！' : '❌ 未中'}
-        </div>
-        <div class="shot-detail-grid">
-            <div class="shot-detail-item">
-                <div class="shot-detail-value">${shot.arc_height ?? '-'}</div>
-                <div class="shot-detail-label">弧高 (px)</div>
-            </div>
-            <div class="shot-detail-item">
-                <div class="shot-detail-value">${shot.duration ?? '-'}s</div>
-                <div class="shot-detail-label">飞行时间</div>
-            </div>
-            <div class="shot-detail-item">
-                <div class="shot-detail-value">
-                    ${shot.release ? shot.release[0] + ', ' + shot.release[1] : '-'}
-                </div>
-                <div class="shot-detail-label">出手位置</div>
-            </div>
-            <div class="shot-detail-item">
-                <div class="shot-detail-value">
-                    ${shot.apex ? shot.apex[0] + ', ' + shot.apex[1] : '-'}
-                </div>
-                <div class="shot-detail-label">弧顶位置</div>
-            </div>
-        </div>
-    `;
-    }
+    <div class="shot-result-banner ${cls}" id="result-banner">${icon} ${lbl}</div>
+    <div class="shot-grid">
+      <div class="shot-cell">
+        <div class="shot-val">${shot.arc_height != null ? Math.round(shot.arc_height) + ' px' : '—'}</div>
+        <div class="shot-key">弧高</div>
+      </div>
+      <div class="shot-cell">
+        <div class="shot-val">${shot.duration != null ? (+shot.duration).toFixed(2) + ' s' : '—'}</div>
+        <div class="shot-key">飞行时间</div>
+      </div>
+      <div class="shot-cell">
+        <div class="shot-val">${shot.release ? shot.release[0] + ',' + shot.release[1] : '—'}</div>
+        <div class="shot-key">出手位置</div>
+      </div>
+      <div class="shot-cell">
+        <div class="shot-val">${shot.apex ? shot.apex[0] + ',' + shot.apex[1] : '—'}</div>
+        <div class="shot-key">弧顶位置</div>
+      </div>
+    </div>`;
 
-    function updateHistory(history) {
-      const el = document.getElementById('history-list');
-      if (!history || history.length === 0) {
-        el.innerHTML = '<div class="empty-msg">暂无投篮记录</div>';
-        return;
+      if (made) {
+        const b = el.querySelector('#result-banner');
+        b.classList.remove('glow-made'); void b.offsetWidth; b.classList.add('glow-made');
       }
-      // 倒序：最新的在顶部
-      const items = [...history].reverse();
-      let html = '';
-      items.forEach((h, i) => {
-        const num = history.length - i;
-        const scored = h.is_scored;
-        html += `
-            <div class="history-item">
-                <span class="num">#${num}</span>
-                <span class="result-badge ${scored ? 'scored' : 'missed'}">
-                    ${scored ? '命中' : '未中'}
-                </span>
-                <span class="arc">弧高 ${h.arc_height ?? '-'} px</span>
-                <span class="time">${h.time || ''}</span>
-            </div>
-        `;
-      });
-      el.innerHTML = html;
     }
 
-    // ─── 初始化 ───
+    function renderHistory(history) {
+      const el = document.getElementById('hist-list');
+      if (!history || history.length === 0) {
+        el.innerHTML = '<div class="empty-state">暂无记录</div>'; return;
+      }
+      const items = [...history].reverse();
+      el.innerHTML = items.map((h, i) => {
+        const num = history.length - i;
+        const made = h.is_scored || h.scored;
+        const cls = made ? 'made' : 'missed';
+        const arc = h.arc_height != null ? Math.round(h.arc_height) + 'px' : '—';
+        return `<div class="hist-row">
+      <span class="hist-num">#${num}</span>
+      <span class="hist-chip ${cls}">${made ? 'IN' : 'OUT'}</span>
+      <span class="hist-arc">⌒ ${arc}</span>
+    </div>`;
+      }).join('');
+    }
+
+    /* ─── INIT ─── */
     document.addEventListener('DOMContentLoaded', () => {
-      updateButtons();
-      // 启动轮询以检测后端初始状态
-      startPolling();
+      updateUI();
+      startPoll();
+      // keep canvas size in sync on resize
+      window.addEventListener('resize', () => {
+        syncCanvas();
+        drawTrajectory(cachedTraj, cachedRelease, cachedScoredResult);
+      });
     });
   </script>
-
 </body>
 
 </html>

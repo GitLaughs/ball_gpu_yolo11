@@ -1,35 +1,27 @@
-### engine/preprocessor.py
 """
-离线视频预处理器（性能优化版 + 出手点 40% 约束）：
-  Phase 1: 视频 → 隔帧 YOLO 批量推理 → 原始检测结果
-  Phase 2: 跨帧 IoU 关联 → 构建轨迹
-  Phase 3: 向量化中位数滤波 → 滑动窗口平滑 → 线性插值补齐漏帧
-  Phase 4: 导出为 {frame_id: [StableDetection2D, ...]}
-  Phase 5: 批量矩阵乘法物理分析 → 像素重力估算 + 自由飞行段检测 + 出手帧确定
-
-优化点：
-  ● Phase 1: YOLO 批量推理
-  ● Phase 3: numpy 向量化中值滤波
-  ● Phase 5: 预计算 Vandermonde 伪逆，矩阵乘法批量拟合 + R² 计算
-  ● Phase 5: 滑动窗口步进采样 (step ≈ win//3)
-  ● Phase 5: 向量化篮筐区域过滤
+离线视频预处理器（流水线版）：
+Phase 1: 视频 → 隔帧 YOLO 批量推理 → 原始检测结果 (逐批发布)
+Phase 2: 跨帧 IoU 关联 → 构建轨迹
+Phase 3: 向量化中位数滤波 → 滑动窗口平滑 → 线性插值补齐漏帧
+Phase 4: 导出为 {frame_id: [StableDetection2D, ...]}
+Phase 5: 批量矩阵乘法物理分析 → 像素重力估算 + 自由飞行段检测 + 出手帧确定
+流水线支持:
+● PreprocessPipeline: 后台线程流式预处理, 主线程数秒后即可开始回放
+● Phase 1 逐批发布原始检测结果, Phase 2-5 完成后替换为平滑跟踪结果
 """
 from __future__ import annotations
-
 import math
 import time
+import threading
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional, Tuple
-
 import cv2
 import numpy as np
 from numpy.lib.stride_tricks import sliding_window_view
-
 from engine.config import EngineConfig
 from engine.models import PhysicsMetadata, RawDetection2D, StableDetection2D
 
 CLASS_NAMES = {0: "hoop", 1: "basketball"}
-
 
 # ====================================================================
 # 内部数据结构
@@ -43,7 +35,6 @@ class TrackPoint:
     conf: float
     is_interpolated: bool = False
 
-
 @dataclass
 class Track:
     track_id: int
@@ -53,7 +44,6 @@ class Track:
     last_bbox: Optional[np.ndarray] = None
     last_center: Optional[np.ndarray] = None
     lost_count: int = 0
-
 
 # ====================================================================
 # 工具函数
@@ -69,12 +59,10 @@ def _box_iou(a: np.ndarray, b: np.ndarray) -> float:
     area_b = max(1, (b[2] - b[0]) * (b[3] - b[1]))
     return inter / (area_a + area_b - inter + 1e-6)
 
-
 def _center_dist(a: np.ndarray, b: np.ndarray) -> float:
     dx = a[0] - b[0]
     dy = a[1] - b[1]
     return math.sqrt(dx * dx + dy * dy)
-
 
 def _moving_average(arr: np.ndarray, window: int) -> np.ndarray:
     if len(arr) <= 1 or window <= 1:
@@ -83,7 +71,6 @@ def _moving_average(arr: np.ndarray, window: int) -> np.ndarray:
     padded = np.pad(arr, pad, mode="reflect")
     kernel = np.ones(window) / window
     return np.convolve(padded, kernel, mode="valid")[: len(arr)]
-
 
 def _median_filter_1d(arr: np.ndarray, window: int) -> np.ndarray:
     n = len(arr)
@@ -94,7 +81,6 @@ def _median_filter_1d(arr: np.ndarray, window: int) -> np.ndarray:
     windows = sliding_window_view(padded, window)
     return np.median(windows, axis=1)[:n].copy()
 
-
 def _precompute_polyfit2(
     win_size: int, dt: float = 1.0
 ) -> Tuple[np.ndarray, np.ndarray]:
@@ -102,7 +88,6 @@ def _precompute_polyfit2(
     V = np.column_stack([t * t, t, np.ones(win_size)])
     pinv_V = np.linalg.pinv(V)
     return pinv_V, V
-
 
 # ====================================================================
 # 主类
@@ -147,6 +132,7 @@ class VideoPreprocessor:
         self,
         video_path: str,
         progress_cb: Optional[Callable[[int, int, str], None]] = None,
+        frame_result_cb: Optional[Callable[[int, List[RawDetection2D]], None]] = None,
     ) -> Tuple[Dict[int, List[RawDetection2D]], int, float]:
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
@@ -176,7 +162,11 @@ class VideoPreprocessor:
                 augment=False,
             )
             for i, res in enumerate(results):
-                raw[batch_ids[i]] = self._parse_yolo_result(res)
+                fid = batch_ids[i]
+                dets = self._parse_yolo_result(res)
+                raw[fid] = dets
+                if frame_result_cb is not None:
+                    frame_result_cb(fid, dets)
             batch_imgs.clear()
             batch_ids.clear()
 
@@ -200,6 +190,8 @@ class VideoPreprocessor:
                 batch_ids.append(frame_id)
             else:
                 raw[frame_id] = []
+                if frame_result_cb is not None:
+                    frame_result_cb(frame_id, [])
 
             if len(batch_imgs) >= batch_size:
                 _flush_batch()
@@ -719,7 +711,6 @@ class VideoPreprocessor:
                 margin_x = hw_h * self.cfg.release_hoop_margin_x
                 margin_y_up = hh_h * self.cfg.release_hoop_margin_y_up
                 margin_y_dn = hh_h * self.cfg.release_hoop_margin_y_dn
-                # ★ 出手 cy 下界 = max(画面40%, 篮筐 cy)
                 min_cy_for_release = max(
                     min_cy_for_release, hoop_center[1]
                 )
@@ -728,11 +719,9 @@ class VideoPreprocessor:
                 cy_curr = cys_seg[i]
                 cy_next = cys_seg[i + 1]
 
-                # ★ 画面下方 40% 不检测出手
                 if cy_curr > img_h * (1 - 0.40):
                     continue
 
-                # 篮筐附近排除
                 if has_hoop:
                     cx_r = track.points[fid].center[0]
                     cy_r = track.points[fid].center[1]
@@ -743,7 +732,6 @@ class VideoPreprocessor:
                     if near_x and near_y:
                         continue
 
-                # 弹地判定排除
                 if i >= self.cfg.release_bounce_consec_frames:
                     prev_fids = seg_fids[max(0, i - 8) : i]
                     if len(prev_fids) >= 2:
@@ -765,7 +753,6 @@ class VideoPreprocessor:
                         ):
                             continue
 
-                # 上升动作检测
                 if cy_curr <= cy_next:
                     continue
 
@@ -871,7 +858,7 @@ class VideoPreprocessor:
         return global_gravity_px, release_frames
 
     # ================================================================
-    # 公开接口
+    # 公开接口 (同步, 兼容旧调用)
     # ================================================================
 
     def process(
@@ -904,3 +891,231 @@ class VideoPreprocessor:
             f"{time.time()-t_start:.1f}s ═══"
         )
         return stable, total, fps, physics
+
+
+# ====================================================================
+# 流水线预处理器 (后台线程 + 流式发布)
+# ====================================================================
+
+class PreprocessPipeline:
+    """
+    流水线预处理:
+    1. 后台线程运行 Phase 1, 逐批发布原始检测结果
+    2. 主线程在 buffer 帧数就绪后即可开始回放
+    3. Phase 2-5 完成后, 自动替换为平滑+跟踪+物理分析结果
+    """
+
+    def __init__(self, model, cfg: EngineConfig, device: str):
+        self._preprocessor = VideoPreprocessor(model, cfg, device)
+        self._lock = threading.Lock()
+
+        # Phase 1 原始结果 (frame_id -> List[RawDetection2D])
+        self._raw_dets: Dict[int, List[RawDetection2D]] = {}
+
+        # Phase 4 平滑跟踪结果 (frame_id -> List[StableDetection2D])
+        self._stable_dets: Dict[int, List[StableDetection2D]] = {}
+        self._smoothed = False
+
+        # 进度
+        self._max_raw_frame = 0
+        self._total_frames = 0
+        self._fps = 30.0
+        self._physics_meta: Optional[PhysicsMetadata] = None
+
+        # 事件
+        self._info_ready = threading.Event()
+        self._phase1_done = threading.Event()
+        self._all_done = threading.Event()
+        self._error: Optional[Exception] = None
+
+        # 进度消息
+        self._progress_msg = ""
+
+    # ── 属性 ──
+
+    @property
+    def total_frames(self) -> int:
+        return self._total_frames
+
+    @property
+    def fps(self) -> float:
+        return self._fps
+
+    @property
+    def physics_meta(self) -> Optional[PhysicsMetadata]:
+        return self._physics_meta
+
+    @property
+    def is_smoothed(self) -> bool:
+        return self._smoothed
+
+    @property
+    def error(self) -> Optional[Exception]:
+        return self._error
+
+    @property
+    def progress_msg(self) -> str:
+        return self._progress_msg
+
+    def frames_ready(self) -> int:
+        with self._lock:
+            return self._max_raw_frame
+
+    def is_all_done(self) -> bool:
+        return self._all_done.is_set()
+
+    def is_phase1_done(self) -> bool:
+        return self._phase1_done.is_set()
+
+    # ── 查询接口 ──
+
+    def get_dets(self, frame_id: int) -> List[StableDetection2D]:
+        """获取指定帧的最佳检测结果 (优先平滑结果)"""
+        with self._lock:
+            if self._smoothed and frame_id in self._stable_dets:
+                return self._stable_dets[frame_id]
+            if frame_id in self._raw_dets:
+                return [
+                    StableDetection2D(
+                        track_id=0,
+                        cls=d.cls,
+                        conf=d.conf,
+                        bbox=d.bbox,
+                        center=d.center,
+                    )
+                    for d in self._raw_dets[frame_id]
+                ]
+            return []
+
+    def wait_for_info(self, timeout: float = 60.0):
+        """等待视频基本信息就绪 (total_frames, fps)"""
+        self._info_ready.wait(timeout)
+
+    def wait_for_frames(self, need_frame: int, timeout: float = 30.0):
+        """阻塞直到指定帧就绪"""
+        deadline = time.time() + timeout
+        while self.frames_ready() < need_frame:
+            if time.time() > deadline or self._error is not None:
+                break
+            if self._all_done.is_set():
+                break
+            time.sleep(0.005)
+
+    # ── 后台启动 ──
+
+    def start(
+        self,
+        video_path: str,
+        progress_cb: Optional[Callable[[int, int, str], None]] = None,
+    ) -> threading.Thread:
+        t = threading.Thread(
+            target=self._run, args=(video_path, progress_cb), daemon=True
+        )
+        t.start()
+        return t
+
+    # ── 内部回调 ──
+
+    def _on_frame_result(self, frame_id: int, dets: List[RawDetection2D]):
+        with self._lock:
+            self._raw_dets[frame_id] = dets
+            if frame_id > self._max_raw_frame:
+                self._max_raw_frame = frame_id
+
+    # ── 后台主流程 ──
+
+    def _run(
+        self,
+        video_path: str,
+        progress_cb: Optional[Callable[[int, int, str], None]],
+    ):
+        try:
+            # 先读取视频基本信息
+            cap = cv2.VideoCapture(video_path)
+            if not cap.isOpened():
+                raise RuntimeError(f"无法打开视频: {video_path}")
+            self._total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            self._fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+            cap.release()
+            self._info_ready.set()
+            print(
+                f"[Pipeline] 视频信息: {self._total_frames} 帧, "
+                f"{self._fps:.1f} fps"
+            )
+
+            # Phase 1: 流式检测
+            def pipeline_progress_cb(cur, total, msg):
+                self._progress_msg = msg
+                if progress_cb:
+                    progress_cb(cur, total, msg)
+
+            raw, total, fps = self._preprocessor._phase1_detect_all(
+                video_path,
+                progress_cb=pipeline_progress_cb,
+                frame_result_cb=self._on_frame_result,
+            )
+            self._total_frames = total
+            self._fps = fps
+
+            # 确保全部原始结果在缓冲中
+            with self._lock:
+                for fid, dets in raw.items():
+                    if fid not in self._raw_dets:
+                        self._raw_dets[fid] = dets
+                self._max_raw_frame = total
+
+            self._phase1_done.set()
+            self._progress_msg = "轨迹构建与物理分析中..."
+            print("[Pipeline] Phase 1 完成, 开始 Phase 2-5 后台处理...")
+
+            if progress_cb:
+                progress_cb(total, total, "轨迹构建与物理分析中...")
+
+            # Phase 2: 跟踪
+            tracks = self._preprocessor._phase2_build_tracks(raw, total)
+
+            # Phase 3: 平滑
+            tracks = self._preprocessor._phase3_smooth(tracks)
+
+            # Phase 5: 物理分析
+            gravity, release_frames = (
+                self._preprocessor._phase5_physics_analysis(tracks, fps)
+            )
+
+            # Phase 4: 导出
+            stable = self._preprocessor._phase4_export(
+                tracks, total, release_frames
+            )
+
+            self._physics_meta = PhysicsMetadata(
+                estimated_gravity_px=gravity,
+                release_frames=release_frames,
+            )
+
+            # 原子替换为平滑结果
+            with self._lock:
+                self._stable_dets = stable
+                self._smoothed = True
+
+            self._all_done.set()
+
+            n_release = sum(
+                1 for v in release_frames.values() if v is not None
+            )
+            self._progress_msg = "预处理全部完成"
+            print(
+                f"[Pipeline] ═══ 全部完成: "
+                f"{sum(len(v) for v in stable.values())} 个检测, "
+                f"{n_release} 个出手帧 ═══"
+            )
+            if progress_cb:
+                progress_cb(total, total, "预处理全部完成")
+
+        except Exception as e:
+            self._error = e
+            self._info_ready.set()
+            self._phase1_done.set()
+            self._all_done.set()
+            import traceback
+            print(f"[Pipeline] 错误: {e}")
+            traceback.print_exc()
