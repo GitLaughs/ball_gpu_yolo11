@@ -32,13 +32,13 @@
 
 ### 2.1 技术栈
 
-| 类别 | 技术 |
-| --- | --- |
-| 后端框架 | Flask、Flask-Cors |
-| 深度学习框架 | PyTorch、Ultralytics YOLO |
-| 图像处理 | OpenCV、NumPy、SciPy |
-| 前端实现 | 原生 HTML、CSS、JavaScript |
-| 部署方式 | Python 虚拟环境 + Windows 批处理脚本 |
+| 类别         | 技术                                 |
+| ------------ | ------------------------------------ |
+| 后端框架     | Flask、Flask-Cors                    |
+| 深度学习框架 | PyTorch、Ultralytics YOLO            |
+| 图像处理     | OpenCV、NumPy、SciPy                 |
+| 前端实现     | 原生 HTML、CSS、JavaScript           |
+| 部署方式     | Python 虚拟环境 + Windows 批处理脚本 |
 
 ### 2.2 总体架构
 
@@ -619,3 +619,41 @@ ball_gpu_yolo11/
 5. 有可用于验收和总结的文档材料。
 
 因此，本项目达到了预期建设目标，具备结题条件。
+
+## 12. 打包交付与故障排查补充
+
+### 12.1 标准交付目录
+
+当前项目使用 PyInstaller `--onedir` 模式，标准可运行交付目录为：
+
+```text
+dist\ball_gpu_yolo11\
+├── ball_gpu_yolo11.exe
+└── _internal\
+```
+
+其中 `_internal` 包含 Python 运行时与动态库，属于程序启动必需内容。
+
+### 12.2 build 目录不可作为交付物
+
+排查中发现 `build\ball_gpu_yolo11\ball_gpu_yolo11.exe` 无法独立运行，报错如下：
+
+```text
+Failed to load Python DLL ...\_internal\python312.dll
+```
+
+根因是 `build` 目录属于 PyInstaller 的中间构建目录，不包含完整分发结构。该目录用于构建阶段，不用于验收交付。
+
+### 12.3 重新打包与验证结论
+
+已重新执行 `build_exe.bat` 全量打包流程，构建日志显示 `Build complete`，并验证 `dist\ball_gpu_yolo11\ball_gpu_yolo11.exe` 可正常启动 Flask 服务。
+
+### 12.4 WinRAR 自解压交付件
+
+基于 `dist\ball_gpu_yolo11` 目录生成 WinRAR 自解压包（SFX）：
+
+```text
+releases\ball_gpu_yolo11_full_sfx.exe
+```
+
+该文件可用于项目演示与离线分发，解压后直接运行目录内 `ball_gpu_yolo11.exe` 即可。

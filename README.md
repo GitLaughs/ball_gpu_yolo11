@@ -20,6 +20,7 @@
 - [🔌 API 接口文档](#-api-接口文档)
 - [🧩 模块详解](#-模块详解)
 - [🔧 配置说明](#-配置说明)
+- [📦 Windows 打包与分发](#-windows-打包与分发)
 - [🐛 故障排除](#-故障排除)
 - [📊 性能参考](#-性能参考)
 - [📝 更新日志](#-更新日志)
@@ -49,17 +50,17 @@
 
 ## ✨ 核心特性
 
-| 特性                | 说明                                                         |
-| ------------------- | ------------------------------------------------------------ |
-| 🎯 YOLO 目标检测     | 基于 YOLOv11 自定义模型，精准检测篮球和篮筐                  |
-| 📷 双目立体视觉      | 利用双目相机标定参数，进行立体校正与深度估计                 |
-| 🔁 五阶段离线预处理  | 检测 → 跟踪 → 平滑 → 导出 → **抛物线物理分析**               |
-| 🧮 抛物线出手检测    | Phase 5 像素重力估算 + 自由飞行段拟合 + 出手帧精确定位       |
-| 🏀 智能投篮状态机    | 五阶段状态机（IDLE → RISING → TRACKING → RESULT → COOLDOWN） |
-| 📊 v7 进球判定       | 网弹容忍 + 框弹多穿越感知 + 弹跳延长跟踪 + 实时穿越快速确认  |
+| 特性                | 说明                                                               |
+| ------------------- | ------------------------------------------------------------------ |
+| 🎯 YOLO 目标检测     | 基于 YOLOv11 自定义模型，精准检测篮球和篮筐                        |
+| 📷 双目立体视觉      | 利用双目相机标定参数，进行立体校正与深度估计                       |
+| 🔁 五阶段离线预处理  | 检测 → 跟踪 → 平滑 → 导出 → **抛物线物理分析**                     |
+| 🧮 抛物线出手检测    | Phase 5 像素重力估算 + 自由飞行段拟合 + 出手帧精确定位             |
+| 🏀 智能投篮状态机    | 五阶段状态机（IDLE → RISING → TRACKING → RESULT → COOLDOWN）       |
+| 📊 v7 进球判定       | 网弹容忍 + 框弹多穿越感知 + 弹跳延长跟踪 + 实时穿越快速确认        |
 | ⚡ stereo 流水线并行 | SGBM 立体匹配移至后台线程，OpenCV C++ 释放 GIL，主线程用前一帧结果 |
-| 🌐 Web 可视化        | Flask + MJPEG 实时推流，响应式前端界面                       |
-| 📈 实时统计          | FPS、延迟、GPU 显存、命中率等数据实时显示                    |
+| 🌐 Web 可视化        | Flask + MJPEG 实时推流，响应式前端界面                             |
+| 📈 实时统计          | FPS、延迟、GPU 显存、命中率等数据实时显示                          |
 
 ---
 
@@ -626,6 +627,59 @@ yolo train model=yolo11n.pt data=basketball.yaml epochs=100 imgsz=640
 
 ---
 
+## 📦 Windows 打包与分发
+
+### 1. 生成正式可运行版本（`dist`）
+
+在项目根目录执行：
+
+```bat
+build_exe.bat
+```
+
+构建成功后，正式发布目录为：
+
+```text
+dist\ball_gpu_yolo11\
+├── ball_gpu_yolo11.exe
+└── _internal\
+```
+
+### 2. 关键说明：`build` 目录不能直接分发
+
+- `build\ball_gpu_yolo11\` 是 PyInstaller 的中间产物目录。
+- 该目录内 `ball_gpu_yolo11.exe` 仅用于构建过程，常见报错为：
+
+```text
+Failed to load Python DLL ...\_internal\python312.dll
+```
+
+- 对外分发与验收请始终使用 `dist\ball_gpu_yolo11\`。
+
+### 3. 制作 WinRAR 自解压安装包（SFX）
+
+示例命令（在项目根目录执行）：
+
+```powershell
+Push-Location .\dist
+& "C:\Program Files\WinRAR\WinRAR.exe" a -r -sfx "..\releases\ball_gpu_yolo11_full_sfx.exe" ".\ball_gpu_yolo11\*"
+Pop-Location
+```
+
+输出文件：
+
+```text
+releases\ball_gpu_yolo11_full_sfx.exe
+```
+
+### 4. 分发建议
+
+1. 验收机器仅需双击 `ball_gpu_yolo11_full_sfx.exe` 解压。
+2. 解压后进入 `ball_gpu_yolo11` 目录运行 `ball_gpu_yolo11.exe`。
+3. 浏览器访问 `http://127.0.0.1:5000`。
+
+---
+
 ## 🐛 故障排除
 
 ### 📋 错误速查表
@@ -721,6 +775,12 @@ python -c "import cv2; cap=cv2.VideoCapture('./ball.avi'); ret,f=cap.read(); pri
 ---
 
 ## 📝 更新日志
+
+### v3.0.1（打包修复）
+
+- "+" 明确发布目录规范：仅 `dist\ball_gpu_yolo11` 为可分发产物
+- "+" 补充 WinRAR 自解压（SFX）打包流程
+- "+" 增加 `build` 目录中间产物不可运行的故障说明
 
 ### v3.0.0（当前版本）
 
