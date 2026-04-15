@@ -52,7 +52,7 @@ class AppState:
 
         self.cfg = EngineConfig()
         self.video_path = "./ball.avi"
-        self.model_path = "./best_yolo11.pt" if os.path.exists("./best_yolo11.pt") else "./best.pt"
+        self.model_path = "./best.pt"
 
         self.stats = {
             "fps": 0.0, "current_frame": 0, "total_frames": 0,

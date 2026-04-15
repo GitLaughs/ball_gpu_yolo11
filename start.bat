@@ -1,4 +1,4 @@
-@REM filepath: run.bat
+@REM filepath: start.bat
 @echo off
 chcp 65001 >nul 2>&1
 title 🏀 AI 篮球投篮分析系统
@@ -11,7 +11,7 @@ echo.
 
 REM ── 检查虚拟环境 ──
 if not exist venv\Scripts\activate.bat (
-    echo [错误] 未找到虚拟环境！请先运行 install.bat 进行安装。
+    echo [错误] 未找到虚拟环境！请先运行 install_gpu.bat 或 install_cpu.bat 进行安装。
     pause
     exit /b 1
 )
@@ -20,9 +20,7 @@ REM ── 激活虚拟环境 ──
 call venv\Scripts\activate.bat
 
 REM ── 检查模型文件 ──
-if exist best_yolo11.pt (
-    echo   ✓ 使用模型: best_yolo11.pt
-) else if exist best.pt (
+if exist best.pt (
     echo   ✓ 使用模型: best.pt
 ) else (
     echo [错误] 未找到模型文件 best.pt！
@@ -45,13 +43,13 @@ echo.
 
 echo ──────────────────────────────────────────────────────────
 echo   启动 Web 服务器...
-echo   浏览器访问: http://127.0.0.1:5002
+echo   浏览器访问: http://127.0.0.1:5000
 echo   按 Ctrl+C 停止服务
 echo ──────────────────────────────────────────────────────────
 echo.
 
 REM ── 自动打开浏览器 ──
-start "" http://127.0.0.1:5002
+start "" http://127.0.0.1:5000
 
 REM ── 启动应用 ──
 python app.py
