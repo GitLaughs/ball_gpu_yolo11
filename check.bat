@@ -1,4 +1,4 @@
-@REM filepath: check.bat
+@REM filepath: check_env.bat
 @echo off
 chcp 65001 >nul 2>&1
 title 🏀 环境检测工具
@@ -37,13 +37,13 @@ if exist venv\Scripts\activate.bat (
     python -c "import flask; print(f'  Flask:      {flask.__version__}')" 2>nul || echo   Flask:      [未安装]
     python -c "import numpy; print(f'  NumPy:      {numpy.__version__}')" 2>nul || echo   NumPy:      [未安装]
 ) else (
-    echo   ✗ 虚拟环境不存在，请先运行 install_gpu.bat 或 install_cpu.bat
+    echo   ✗ 虚拟环境不存在，请先运行 install.bat
 )
 echo.
 
 echo ── 项目文件 ──
 if exist app.py          (echo   ✓ app.py) else (echo   ✗ app.py [缺失])
-if exist best.pt         (echo   ✓ best.pt) else (echo   ⚠ 模型文件 [缺失])
+if exist best.pt         (echo   ✓ best.pt) else if exist best_yolo11.pt (echo   ✓ best_yolo11.pt) else (echo   ⚠ 模型文件 [缺失])
 if exist static\index.html (echo   ✓ static/index.html) else (echo   ✗ static/index.html [缺失])
 if exist engine\config.py  (echo   ✓ engine/) else (echo   ✗ engine/ [缺失])
 if exist ball.avi        (echo   ✓ ball.avi) else (echo   ℹ ball.avi [可选])

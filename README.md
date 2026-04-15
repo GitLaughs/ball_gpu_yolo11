@@ -81,7 +81,7 @@
 
 #### 2. 🎯 YOLOv11 目标检测 + 批量推理
 
-- 使用 `best.pt` 自训练 YOLO 模型
+- 使用 `best.pt` / `best_yolo11.pt` 自训练 YOLO 模型
 - **Phase 1 批量推理**：多帧打包一次 `model.predict()`，GPU 利用率更高
 - 仅对左摄像头帧做目标检测，右摄像头用于深度计算
 - 类别 ID 映射：`0 → hoop`（篮筐），`1 → basketball`（篮球）
@@ -183,10 +183,10 @@ basketball-shot-analysis/
 ├── exports/                # 导出数据目录
 ├── logs/                   # 日志文件目录
 │
-├── install_gpu.bat         # Windows 一键安装脚本（GPU 版）
+├── install.bat             # Windows 一键安装脚本（GPU 版）
 ├── install_cpu.bat         # Windows CPU 版安装脚本
-├── start.bat               # Windows 一键启动脚本
-├── check.bat               # 环境检测工具
+├── run.bat                 # Windows 一键启动脚本
+├── check_env.bat           # 环境检测工具
 │
 ├── ball.avi                # 示例视频（双目拼接格式）
 ├── basketball1.mp4         # 测试视频 1
@@ -213,7 +213,7 @@ basketball-shot-analysis/
 | ---- | -------------------------------- |
 | GPU  | NVIDIA GPU（GTX 1060 及以上）    |
 | VRAM | 4 GB+（推荐 8 GB+）              |
-| CUDA | 12.1+（由 install_gpu.bat 自动匹配） |
+| CUDA | 12.1+（由 install.bat 自动匹配） |
 | 驱动 | NVIDIA Driver 525.0+             |
 
 > ⚠️ **CPU 模式警告**：无 GPU 时系统可运行但 FPS 极低（< 5 FPS），不适合实时检测。
@@ -233,12 +233,12 @@ cd basketball-shot-analysis
 
 **Step 2. 运行安装脚本**
 
-- 有 NVIDIA GPU → 双击 `install_gpu.bat`
+- 有 NVIDIA GPU → 双击 `install.bat`
 - 无 GPU / 仅 CPU → 双击 `install_cpu.bat`
 
 **Step 3. 启动系统**
 
-双击 `start.bat`，然后浏览器访问 `http://127.0.0.1:5000`
+双击 `run.bat`，然后浏览器访问 `http://127.0.0.1:5002`
 
 ---
 
@@ -275,7 +275,7 @@ pip install -r requirements.txt
 
 **Step 4. 放置模型文件**
 
-将 `best.pt` 放在项目根目录。
+将 `best.pt`（或 `best_yolo11.pt`）放在项目根目录。
 
 **Step 5. 启动**
 
@@ -283,7 +283,7 @@ pip install -r requirements.txt
 python app.py
 ```
 
-浏览器访问 `http://127.0.0.1:5000`
+浏览器访问 `http://127.0.0.1:5002`
 
 ---
 
@@ -686,14 +686,14 @@ yolo train model=yolo11n.pt data=basketball.yaml epochs=100 imgsz=640
 ### 🔍 视频流无画面
 
 1. 检查视频文件分辨率是否为 1280×480（双目拼接）
-2. 直接访问 `http://127.0.0.1:5000/api/video_feed` 验证流是否正常
+2. 直接访问 `http://127.0.0.1:5002/api/video_feed/left` 验证流是否正常
 3. 清除浏览器缓存或换用 Chrome / Edge 浏览器
 
 ### 🛠️ 通用调试命令
 
 ```cmd
 :: 检查完整环境
-check.bat
+check_env.bat
 
 :: 单独测试 YOLO 模型加载
 python -c "from ultralytics import YOLO; m = YOLO('./best.pt'); print('classes:', m.names)"
@@ -749,7 +749,7 @@ python -c "import cv2; cap=cv2.VideoCapture('./ball.avi'); ret,f=cap.read(); pri
 - \+ 空心球 / 打板球 / 弹框球智能判定
 - \+ 实时穿越检测 + 快速进球确认（5 帧）
 - \+ `install_cpu.bat` CPU 版一键安装脚本
-- \+ `check.bat` 环境检测工具
+- \+ `check_env.bat` 环境检测工具
 
 ### v1.0.0（2025-01）
 
@@ -778,6 +778,6 @@ python -c "import cv2; cap=cv2.VideoCapture('./ball.avi'); ret,f=cap.read(); pri
 
 ---
 
-> **遇到问题？** 查看 [🐛 故障排除](#-故障排除) 章节，或运行 `check.bat` 进行环境自检。
+> **遇到问题？** 查看 [🐛 故障排除](#-故障排除) 章节，或运行 `check_env.bat` 进行环境自检。
 >
 > Made with ❤️ for Basketball Analytics

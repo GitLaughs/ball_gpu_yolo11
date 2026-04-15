@@ -88,6 +88,8 @@ echo.
 
 if exist best.pt (
     echo   ✓ 模型文件 best.pt 已找到
+) else if exist best_yolo11.pt (
+    echo   ✓ 模型文件 best_yolo11.pt 已找到
 ) else (
     echo   ⚠ 未找到模型文件！请将 best.pt 放在项目根目录下。
 )
@@ -96,8 +98,8 @@ echo.
 echo ══════════════════════════════════════════════════════════
 echo   ✅ 安装完成！(CPU 版本)
 echo.
-echo   启动: 双击 start.bat 或执行 python app.py
-echo   访问: http://127.0.0.1:5000
+echo   启动: 双击 run.bat 或执行 python app.py
+echo   访问: http://127.0.0.1:5002
 echo.
 echo   ⚠ CPU 模式下处理速度较慢，建议使用较短的视频。
 echo ══════════════════════════════════════════════════════════

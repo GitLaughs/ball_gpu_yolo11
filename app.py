@@ -51,12 +51,24 @@ class AppState:
         self.thread: Optional[threading.Thread] = None
 
         self.cfg = EngineConfig()
-        self.video_path = "./ball.avi"
-        self.model_path = "./best.pt"
+        self.video_path = next(
+            (
+                path for path in (
+                    "./ball.avi",
+                    "./ball.mp4",
+                    "./basketball1.mp4",
+                    "./basketball2.mp4",
+                )
+                if os.path.exists(path)
+            ),
+            "./ball.mp4",
+        )
+        self.model_path = "./best_yolo11.pt" if os.path.exists("./best_yolo11.pt") else "./best.pt"
 
         self.stats = {
             "fps": 0.0, "current_frame": 0, "total_frames": 0,
             "process_time": 0.0, "gpu_memory": 0.0, "phase": "idle",
+            "basketball_count": 0, "hoops_count": 0,
         }
 
         self.latest_frame_left = None
@@ -167,6 +179,9 @@ def detection_loop():
                 elif d.cls == "hoop":
                     if hoop_det is None or d.conf > hoop_det.conf: hoop_det = d
 
+            basketball_count = sum(1 for d in dets if d.cls == "basketball")
+            hoops_count = sum(1 for d in dets if d.cls == "hoop")
+
             is_physics_release = hasattr(ball_det, "is_release_point") and ball_det.is_release_point
 
             shot_event = shot_engine.update(
@@ -193,6 +208,8 @@ def detection_loop():
                     "current_frame": frame_id,
                     "process_time": round(t_elapsed * 1000, 1),
                     "phase": display_info["phase"],
+                    "basketball_count": basketball_count,
+                    "hoops_count": hoops_count,
                 })
 
                 if DEVICE.startswith("cuda") and torch.cuda.is_available():
@@ -215,6 +232,8 @@ def detection_loop():
                         "duration": shot_event.duration_s,
                         "final_trajectory": [(p.cx, p.cy) for p in shot_event.trajectory],
                         "final_release": list(shot_event.release_point),
+                        "release": list(shot_event.release_point),   # 新增，供前端直接使用
+                        "apex": list(shot_event.apex_point),         # 新增，弧顶位置
                     }
 
             next_frame_time += frame_interval
@@ -303,6 +322,7 @@ def api_status():
             "is_running": state.is_running, "is_paused": state.is_paused,
             "is_preprocessing": state.is_preprocessing, "preprocess_progress": state.preprocess_progress,
             "stats": state.stats, "shot_info": state.shot_info,
+            "device": torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU",
         })
 
 def make_stream(source_var_name):

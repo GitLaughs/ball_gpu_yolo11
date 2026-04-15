@@ -1,59 +1,114 @@
-@REM filepath: start.bat
 @echo off
+setlocal EnableExtensions
 chcp 65001 >nul 2>&1
-title 🏀 AI 篮球投篮分析系统
+
+set "ROOT_DIR=%~dp0"
+pushd "%ROOT_DIR%" >nul
+
+title Basketball Shot Detection - Launcher
 color 0E
 
-echo ══════════════════════════════════════════════════════════
-echo          🏀 AI 篮球投篮分析系统 - 启动中...
-echo ══════════════════════════════════════════════════════════
+echo ============================================================
+echo   Basketball Shot Detection - Launcher
+echo ============================================================
 echo.
 
-REM ── 检查虚拟环境 ──
-if not exist venv\Scripts\activate.bat (
-    echo [错误] 未找到虚拟环境！请先运行 install_gpu.bat 或 install_cpu.bat 进行安装。
+call :detect_venv
+if not defined VENV_DIR (
+    echo [INFO] Virtual environment was not found.
+    echo        Starting install_gpu.bat for first-time setup...
+    echo.
+    call "%ROOT_DIR%install_gpu.bat"
+    if errorlevel 1 (
+        echo [ERROR] Installation was not completed successfully.
+        echo.
+        pause
+        popd >nul
+        exit /b 1
+    )
+    call :detect_venv
+)
+
+if not defined VENV_DIR (
+    echo [ERROR] No usable virtual environment was found after installation.
+    echo.
     pause
+    popd >nul
     exit /b 1
 )
 
-REM ── 激活虚拟环境 ──
-call venv\Scripts\activate.bat
-
-REM ── 检查模型文件 ──
-if exist best.pt (
-    echo   ✓ 使用模型: best.pt
-) else (
-    echo [错误] 未找到模型文件 best.pt！
-    echo        请将 YOLO 模型权重文件放在项目根目录下。
+set "VENV_PY=%ROOT_DIR%%VENV_DIR%\Scripts\python.exe"
+if not exist "%VENV_PY%" (
+    echo [ERROR] Virtual environment Python not found:
+    echo         %VENV_PY%
+    echo.
     pause
+    popd >nul
     exit /b 1
 )
 
-REM ── 检查视频 ──
-if exist ball.avi (
-    echo   ✓ 默认视频: ball.avi
-) else (
-    echo   ℹ 未找到 ball.avi，可通过 Web 界面上传视频。
+if not exist "static" mkdir "static"
+if not exist "uploads" mkdir "uploads"
+if not exist "exports" mkdir "exports"
+if not exist "logs" mkdir "logs"
+if not exist "static\index.html" if exist "static\index_old.html" (
+    copy /Y "static\index_old.html" "static\index.html" >nul
 )
+
+if not exist "static\index.html" (
+    echo [ERROR] Frontend page not found: static\index.html
+    echo         Please check the repository files.
+    echo.
+    pause
+    popd >nul
+    exit /b 1
+)
+
+if exist "best_yolo11.pt" (
+    echo [OK] Using model: best_yolo11.pt
+) else if exist "best.pt" (
+    echo [OK] Using model: best.pt
+) else (
+    echo [ERROR] Model file not found.
+    echo         Put best.pt or best_yolo11.pt in the project root.
+    echo.
+    pause
+    popd >nul
+    exit /b 1
+)
+
+echo Checking runtime dependencies...
+"%VENV_PY%" -c "import flask, cv2, torch, ultralytics"
+if errorlevel 1 (
+    echo [ERROR] Runtime dependencies are incomplete.
+    echo         Please run install_gpu.bat or install_cpu.bat again.
+    echo.
+    pause
+    popd >nul
+    exit /b 1
+)
+
+for /f "usebackq delims=" %%I in (`"%VENV_PY%" -c "import torch; print(torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU')"` ) do set "DEVICE_NAME=%%I"
+if not defined DEVICE_NAME set "DEVICE_NAME=CPU"
+
+echo [OK] Runtime device: %DEVICE_NAME%
+echo [OK] Working directory: %ROOT_DIR%
+echo.
+echo Opening browser: http://127.0.0.1:5000
+echo Press Ctrl+C in this window to stop the service.
 echo.
 
-REM ── 显示设备信息 ──
-python -c "import torch; d='CUDA: '+torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU'; print(f'  运行设备: {d}')" 2>nul
-echo.
-
-echo ──────────────────────────────────────────────────────────
-echo   启动 Web 服务器...
-echo   浏览器访问: http://127.0.0.1:5000
-echo   按 Ctrl+C 停止服务
-echo ──────────────────────────────────────────────────────────
-echo.
-
-REM ── 自动打开浏览器 ──
 start "" http://127.0.0.1:5000
-
-REM ── 启动应用 ──
-python app.py
+"%VENV_PY%" app.py
 
 echo.
-echo   服务已停止。
+echo Service stopped.
 pause
+popd >nul
+exit /b 0
+
+:detect_venv
+set "VENV_DIR="
+if exist "venv\Scripts\python.exe" set "VENV_DIR=venv"
+if not defined VENV_DIR if exist ".venv\Scripts\python.exe" set "VENV_DIR=.venv"
+exit /b 0

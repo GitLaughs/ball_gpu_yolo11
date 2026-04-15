@@ -1,133 +1,163 @@
-@REM filepath: install_gpu.bat
 @echo off
+setlocal EnableExtensions
 chcp 65001 >nul 2>&1
-title 🏀 AI 篮球投篮分析系统 - 安装程序 (GPU版)
+
+set "ROOT_DIR=%~dp0"
+pushd "%ROOT_DIR%" >nul
+
+title Basketball Shot Detection - GPU Installer
 color 0A
 
-echo ══════════════════════════════════════════════════════════
-echo    🏀 AI 篮球投篮分析系统 - 一键安装脚本 (GPU 版)
-echo ══════════════════════════════════════════════════════════
+echo ============================================================
+echo   Basketball Shot Detection - One Click GPU Install
+echo ============================================================
 echo.
 
-REM ── 检查 Python ──
-echo [1/6] 检查 Python 环境...
-python --version >nul 2>&1
-if %errorlevel% neq 0 (
-    echo [错误] 未检测到 Python！
-    echo        请从 https://www.python.org/downloads/ 下载安装 Python 3.10+
-    echo        安装时请勾选 "Add Python to PATH"
-    pause
-    exit /b 1
+set "PY_CMD=python"
+%PY_CMD% --version >nul 2>&1
+if errorlevel 1 (
+    set "PY_CMD=py -3"
+    %PY_CMD% --version >nul 2>&1
+    if errorlevel 1 (
+        echo [ERROR] Python 3 was not found.
+        echo Install Python 3.10+ and enable "Add Python to PATH".
+        echo Download: https://www.python.org/downloads/
+        echo.
+        pause
+        exit /b 1
+    )
 )
-python --version
-echo       ✓ Python 已安装
+
+echo [1/7] Python detected:
+%PY_CMD% --version
 echo.
 
-REM ── 检查 NVIDIA GPU ──
-echo [2/6] 检查 NVIDIA GPU...
+echo [2/7] Checking NVIDIA GPU...
 nvidia-smi >nul 2>&1
-if %errorlevel% neq 0 (
-    echo [警告] 未检测到 NVIDIA GPU 或驱动未安装！
-    echo        将继续安装 CUDA 版 PyTorch，但运行时可能回退到 CPU 模式。
-    echo        如果您没有 NVIDIA GPU，建议使用 install_cpu.bat 安装。
-    echo.
-    set /p CONTINUE="是否继续？(Y/N): "
-    if /i not "%CONTINUE%"=="Y" (
-        echo 已取消安装。请使用 install_cpu.bat 安装 CPU 版本。
+if errorlevel 1 (
+    echo [WARN] NVIDIA GPU or driver was not detected.
+    echo        If this machine is CPU-only, use install_cpu.bat instead.
+    set /p CONTINUE=Continue GPU package installation anyway? [Y/N]: 
+    if /I not "%CONTINUE%"=="Y" (
+        echo Installation cancelled.
+        echo.
         pause
         exit /b 0
     )
 ) else (
-    echo       ✓ NVIDIA GPU 已检测到
+    echo [OK] NVIDIA GPU detected:
     nvidia-smi --query-gpu=name,driver_version --format=csv,noheader
 )
 echo.
 
-REM ── 创建虚拟环境 ──
-echo [3/6] 创建 Python 虚拟环境...
-if exist venv (
-    echo       虚拟环境已存在，跳过创建。
+set "VENV_DIR="
+if exist "venv\Scripts\python.exe" set "VENV_DIR=venv"
+if not defined VENV_DIR if exist ".venv\Scripts\python.exe" set "VENV_DIR=.venv"
+if not defined VENV_DIR set "VENV_DIR=venv"
+
+echo [3/7] Preparing virtual environment: %VENV_DIR%
+if exist "%VENV_DIR%\Scripts\python.exe" (
+    echo [OK] Reusing existing virtual environment.
 ) else (
-    python -m venv venv
-    if %errorlevel% neq 0 (
-        echo [错误] 虚拟环境创建失败！
+    %PY_CMD% -m venv "%VENV_DIR%"
+    if errorlevel 1 (
+        echo [ERROR] Failed to create virtual environment.
+        echo.
         pause
         exit /b 1
     )
-    echo       ✓ 虚拟环境创建成功
+    echo [OK] Virtual environment created.
 )
 echo.
 
-REM ── 激活虚拟环境 ──
-call venv\Scripts\activate.bat
-
-REM ── 升级 pip ──
-echo [4/6] 升级 pip...
-python -m pip install --upgrade pip setuptools wheel -q
-echo       ✓ pip 已升级
-echo.
-
-REM ── 安装 PyTorch (CUDA 12.1) ──
-echo [5/6] 安装 PyTorch (CUDA 12.1 版本)...
-echo       这可能需要几分钟，请耐心等待...
-pip install torch==2.5.1+cu121 torchvision==0.20.1+cu121 torchaudio==2.5.1+cu121 --index-url https://download.pytorch.org/whl/cu121
-if %errorlevel% neq 0 (
-    echo [错误] PyTorch 安装失败！请检查网络连接。
-    echo        也可手动执行:
-    echo        pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+set "VENV_PY=%ROOT_DIR%%VENV_DIR%\Scripts\python.exe"
+if not exist "%VENV_PY%" (
+    echo [ERROR] Virtual environment Python not found:
+    echo         %VENV_PY%
+    echo.
     pause
     exit /b 1
 )
-echo       ✓ PyTorch CUDA 版已安装
-echo.
 
-REM ── 安装其他依赖 ──
-echo [6/6] 安装其他项目依赖...
-pip install flask==3.1.0 flask-cors==4.0.0 -q
-pip install opencv-contrib-python==4.10.0.84 -q
-pip install numpy==1.26.4 scipy matplotlib -q
-pip install ultralytics==8.3.227 -q
-pip install tqdm psutil requests pyyaml colorama pillow -q
-if %errorlevel% neq 0 (
-    echo [警告] 部分依赖安装可能失败，请检查上方输出。
-) else (
-    echo       ✓ 所有依赖安装完成
+echo [4/7] Upgrading pip tools...
+"%VENV_PY%" -m pip install --upgrade pip setuptools wheel
+if errorlevel 1 (
+    echo [ERROR] Failed to upgrade pip/setuptools/wheel.
+    echo.
+    pause
+    exit /b 1
 )
 echo.
 
-REM ── 创建必要目录 ──
-if not exist static  mkdir static
-if not exist uploads mkdir uploads
-if not exist exports mkdir exports
-if not exist logs    mkdir logs
-
-REM ── 验证安装 ──
-echo ──────────────────────────────────────────────────────────
-echo   验证安装结果...
-echo ──────────────────────────────────────────────────────────
-python -c "import torch; print(f'  PyTorch:  {torch.__version__}'); print(f'  CUDA:     {torch.cuda.is_available()}'); print(f'  GPU:      {torch.cuda.get_device_name(0) if torch.cuda.is_available() else \"N/A\"}')"
-python -c "import cv2; print(f'  OpenCV:   {cv2.__version__}')"
-python -c "import ultralytics; print(f'  YOLO:     {ultralytics.__version__}')"
-python -c "import flask; print(f'  Flask:    {flask.__version__}')"
-echo.
-
-REM ── 检查模型文件 ──
-if exist best.pt (
-    echo   ✓ 模型文件 best.pt 已找到
-) else (
-    echo   ⚠ 未找到模型文件！请将 best.pt 放在项目根目录下。
+echo [5/7] Installing PyTorch with CUDA 12.1...
+"%VENV_PY%" -m pip install torch==2.5.1+cu121 torchvision==0.20.1+cu121 torchaudio==2.5.1+cu121 --index-url https://download.pytorch.org/whl/cu121
+if errorlevel 1 (
+    echo [ERROR] PyTorch GPU installation failed.
+    echo         Please check your network or CUDA driver compatibility.
+    echo.
+    pause
+    exit /b 1
 )
 echo.
 
-echo ══════════════════════════════════════════════════════════
-echo   ✅ 安装完成！
+echo [6/7] Installing project dependencies...
+"%VENV_PY%" -m pip uninstall -y opencv-python opencv-python-headless opencv-contrib-python-headless >nul 2>&1
+"%VENV_PY%" -m pip install Flask==3.1.0 Flask-Cors==4.0.0
+if errorlevel 1 goto :install_failed
+"%VENV_PY%" -m pip install opencv-contrib-python==4.10.0.84
+if errorlevel 1 goto :install_failed
+"%VENV_PY%" -m pip install numpy==1.26.4 scipy==1.16.3 matplotlib==3.9.2 Pillow==11.1.0
+if errorlevel 1 goto :install_failed
+"%VENV_PY%" -m pip install ultralytics==8.3.227 tqdm psutil requests PyYAML colorama
+if errorlevel 1 goto :install_failed
+echo [OK] Core packages installed.
 echo.
-echo   启动方式:
-echo     方式1: 双击 start.bat
-echo     方式2: 执行以下命令
-echo            venv\Scripts\activate
-echo            python app.py
+
+echo [7/7] Preparing runtime files...
+if not exist "static" mkdir "static"
+if not exist "uploads" mkdir "uploads"
+if not exist "exports" mkdir "exports"
+if not exist "logs" mkdir "logs"
+if not exist "static\index.html" if exist "static\index_old.html" (
+    copy /Y "static\index_old.html" "static\index.html" >nul
+    echo [OK] Restored static\index.html from static\index_old.html
+)
 echo.
-echo   访问地址: http://127.0.0.1:5000
-echo ══════════════════════════════════════════════════════════
+
+echo Verifying installation...
+"%VENV_PY%" -c "import flask, cv2, torch, ultralytics; print('Python      : OK'); print('Flask       :', flask.__version__); print('OpenCV      :', cv2.__version__); print('PyTorch     :', torch.__version__); print('CUDA Ready  :', torch.cuda.is_available()); print('Ultralytics :', ultralytics.__version__)"
+if errorlevel 1 (
+    echo [ERROR] Verification failed. Please review the install output above.
+    echo.
+    pause
+    exit /b 1
+)
+echo.
+
+if exist "best_yolo11.pt" (
+    echo [OK] Model found: best_yolo11.pt
+) else if exist "best.pt" (
+    echo [OK] Model found: best.pt
+) else (
+    echo [WARN] Model file was not found in the project root.
+    echo        Put best.pt or best_yolo11.pt next to app.py before running.
+)
+echo.
+
+echo ============================================================
+echo   Installation completed.
+echo   Start the project by double-clicking start.bat
+echo   Web URL: http://127.0.0.1:5000
+echo ============================================================
+echo.
 pause
+popd >nul
+exit /b 0
+
+:install_failed
+echo [ERROR] Dependency installation failed.
+echo         Please review the output above and retry.
+echo.
+pause
+popd >nul
+exit /b 1

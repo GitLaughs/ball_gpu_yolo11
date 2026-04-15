@@ -1,0 +1,61 @@
+# Virtual Environment
+.venv/
+venv/
+env/
+ENV/
+*.egg-info/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+**/*.egg-info/
+.installed.cfg
+*.egg
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs and outputs
+logs/
+*.log
+runs/
+
+# Model weights (too large)
+*.pt
+*.pth
+*.weights
+*.mp4
+
+# Uploads and exports
+uploads/
+exports/
+
+# Data
+ultralytics-8.3.226/
+labelImg/
+libs/
+PyQt5/
+lxml/
+python3.8.venv/
+tests/
+docs/build/
