@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import sys
 import time
 import threading
 from datetime import datetime
@@ -19,7 +20,14 @@ from engine.preprocessor import PreprocessPipeline
 from engine.vision_engine import VisionEngine, StereoParams
 from engine.shot_engine import ShotEngine
 
-app = Flask(__name__, static_folder="./static", static_url_path="/static")
+
+def resource_path(relative_path: str) -> str:
+    # Support both source run and PyInstaller bundle mode.
+    base_path = getattr(sys, "_MEIPASS", os.path.abspath("."))
+    return os.path.join(base_path, relative_path)
+
+
+app = Flask(__name__, static_folder=resource_path("static"), static_url_path="/static")
 CORS(app)
 
 ALLOWED_EXT = {"avi", "mp4", "mov", "mkv", "flv", "wmv"}
@@ -63,7 +71,18 @@ class AppState:
             ),
             "./ball.mp4",
         )
-        self.model_path = "./best_yolo11.pt" if os.path.exists("./best_yolo11.pt") else "./best.pt"
+        self.model_path = next(
+            (
+                path for path in (
+                    "./best_yolo11.pt",
+                    "./best.pt",
+                    resource_path("best_yolo11.pt"),
+                    resource_path("best.pt"),
+                )
+                if os.path.exists(path)
+            ),
+            "./best.pt",
+        )
 
         self.stats = {
             "fps": 0.0, "current_frame": 0, "total_frames": 0,
