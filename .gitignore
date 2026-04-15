@@ -50,6 +50,7 @@ runs/
 # Uploads and exports
 uploads/
 exports/
+releases/
 
 # Data
 ultralytics-8.3.226/

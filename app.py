@@ -5,6 +5,7 @@ import os
 import sys
 import time
 import threading
+import webbrowser
 from datetime import datetime
 from typing import Optional
 
@@ -376,5 +377,21 @@ def upload_video():
     with state.lock: state.video_path = save_path
     return jsonify({"status": "uploaded", "filename": os.path.basename(save_path)})
 
+
+def open_frontend_in_browser() -> None:
+    # Delay browser open slightly to allow Flask server socket to bind.
+    def _open() -> None:
+        try:
+            opened = webbrowser.open("http://127.0.0.1:5000", new=2)
+            if opened:
+                print("[INFO] Frontend opened in browser: http://127.0.0.1:5000")
+            else:
+                print("[WARN] Browser did not open automatically. Please visit http://127.0.0.1:5000")
+        except Exception:
+            print("[WARN] Failed to open browser automatically. Please visit http://127.0.0.1:5000")
+
+    threading.Timer(1.2, _open).start()
+
 if __name__ == "__main__":
+    open_frontend_in_browser()
     app.run(host="0.0.0.0", port=5000, debug=False, threaded=True)
