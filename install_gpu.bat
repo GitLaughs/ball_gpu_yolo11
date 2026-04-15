@@ -1,4 +1,4 @@
-@REM filepath: install.bat
+@REM filepath: install_gpu.bat
 @echo off
 chcp 65001 >nul 2>&1
 title 🏀 AI 篮球投篮分析系统 - 安装程序 (GPU版)
@@ -114,8 +114,6 @@ echo.
 REM ── 检查模型文件 ──
 if exist best.pt (
     echo   ✓ 模型文件 best.pt 已找到
-) else if exist best_yolo11.pt (
-    echo   ✓ 模型文件 best_yolo11.pt 已找到
 ) else (
     echo   ⚠ 未找到模型文件！请将 best.pt 放在项目根目录下。
 )
@@ -125,11 +123,11 @@ echo ═════════════════════════
 echo   ✅ 安装完成！
 echo.
 echo   启动方式:
-echo     方式1: 双击 run.bat
+echo     方式1: 双击 start.bat
 echo     方式2: 执行以下命令
 echo            venv\Scripts\activate
 echo            python app.py
 echo.
-echo   访问地址: http://127.0.0.1:5002
+echo   访问地址: http://127.0.0.1:5000
 echo ══════════════════════════════════════════════════════════
 pause
